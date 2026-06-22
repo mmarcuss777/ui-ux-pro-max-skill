@@ -1,0 +1,152 @@
+<!DOCTYPE html>
+<html lang="sk">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Marcus Marinica | Domov</title>
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+
+<!-- Animated background blobs -->
+<div class="blobs" aria-hidden="true">
+  <div class="blob blob-1"></div>
+  <div class="blob blob-2"></div>
+  <div class="blob blob-3"></div>
+</div>
+
+<div class="wrap">
+
+  <!-- NAVBAR -->
+  <header class="navbar" id="navbar">
+    <div class="container">
+      <div class="navbar__inner">
+        <a class="navbar__logo" href="index.html">Marcus <span>Marinica</span></a>
+        <nav class="navbar__nav" aria-label="Hlavná navigácia">
+          <a href="index.html" class="active">Domov</a>
+          <a href="omne.html">O mne</a>
+          <a href="skola.html">Škola</a>
+          <a href="zaluby.html">Záľuby a plány</a>
+        </nav>
+      </div>
+    </div>
+  </header>
+
+  <main>
+
+    <!-- HERO -->
+    <section class="hero" aria-labelledby="hero-title">
+      <div class="container">
+        <div class="hero__grid">
+
+          <div class="hero__content reveal">
+            <span class="label">Profesijné portfólio</span>
+            <h1 id="hero-title" class="gradient-text">Vitajte na mojej osobnej stránke</h1>
+            <p class="hero__desc">
+              Volám sa Marcus Marinica a som študentom Gymnázia Jána Adama Raymana v Prešove.
+              Táto stránka slúži ako stručná prezentácia môjho štúdia, záujmov, schopností
+              a plánov do budúcnosti.
+            </p>
+
+            <blockquote class="hero__quote" aria-label="Motto">
+              <p>
+                „Nech všetko tvoje konanie, reč i myslenie je také, akoby si v tejto chvíli
+                mal odísť zo života, akoby čas, ktorý ti je pridelený, bol neočakávaným darom."
+              </p>
+              <cite class="hero__quote-author">— Marcus Aurelius</cite>
+            </blockquote>
+
+            <div class="hero__actions">
+              <a class="btn btn--primary" href="omne.html">Viac o mne</a>
+              <a class="btn btn--ghost" href="skola.html">Moje štúdium</a>
+            </div>
+          </div>
+
+          <div class="hero__photo reveal d2" style="position:relative;">
+            <div class="hero__glow"></div>
+            <div class="hero__photo-frame">
+              <img src="img/profil.jpg" alt="Marcus Marinica na lodi pri mori" width="480" height="560">
+            </div>
+          </div>
+
+        </div>
+      </div>
+    </section>
+
+    <!-- WHAT TO FIND -->
+    <section class="section section--alt" aria-labelledby="nav-section-title">
+      <div class="container">
+        <div class="section-header section-header--center reveal">
+          <span class="label">Obsah stránky</span>
+          <h2 id="nav-section-title">Čo tu môžete nájsť?</h2>
+        </div>
+        <div class="grid grid--4">
+          <div class="card card--hover card--glow reveal d1">
+            <h3>O mne</h3>
+            <p>Základné informácie o mne, mojom štúdiu, vlastnostiach a schopnostiach.</p>
+            <a href="omne.html" class="link">Zobraziť profil</a>
+          </div>
+          <div class="card card--hover card--glow reveal d2">
+            <h3>Škola</h3>
+            <p>Prehľad môjho štúdia, rozvrh hodín a priestor na školské projekty.</p>
+            <a href="skola.html" class="link">Pozrieť školu</a>
+          </div>
+          <div class="card card--hover card--glow reveal d3">
+            <h3>Záľuby</h3>
+            <p>Aktivity, ktorým sa venujem vo voľnom čase — šport, čítanie a hudba.</p>
+            <a href="zaluby.html" class="link">Zobraziť záľuby</a>
+          </div>
+          <div class="card card--hover card--glow reveal d4">
+            <h3>Plány</h3>
+            <p>Stručný prehľad toho, kam by som chcel smerovať po skončení gymnázia.</p>
+            <a href="zaluby.html#plany" class="link">Pozrieť plány</a>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ABOUT SITE -->
+    <section class="section" aria-labelledby="about-site-title">
+      <div class="container container--narrow">
+        <div class="card reveal">
+          <span class="label">O tejto stránke</span>
+          <h2 id="about-site-title" style="margin-bottom:16px;">Stručne o stránke</h2>
+          <p>
+            Web je vytvorený ako školský projekt z informatiky. Obsahuje štyri prepojené stránky,
+            vlastné fotografie, rozvrh hodín a samostatné časti venované vzdelaniu, záľubám
+            a plánom do budúcnosti. Cieľom stránky je jednoducho predstaviť moju osobu,
+            školské práce a aktivity, ktorým sa venujem mimo vyučovania.
+          </p>
+        </div>
+      </div>
+    </section>
+
+  </main>
+
+  <footer class="footer">
+    <div class="container">
+      <p>&copy; 2026 Marcus Marinica</p>
+    </div>
+  </footer>
+
+</div><!-- /wrap -->
+
+<script>
+  // Navbar scroll shadow
+  const nav = document.getElementById('navbar');
+  window.addEventListener('scroll', () => {
+    nav.classList.toggle('scrolled', window.scrollY > 20);
+  }, { passive: true });
+
+  // Scroll reveal
+  const observer = new IntersectionObserver((entries) => {
+    entries.forEach(e => {
+      if (e.isIntersecting) { e.target.classList.add('in'); observer.unobserve(e.target); }
+    });
+  }, { threshold: 0.12 });
+
+  document.querySelectorAll('.reveal').forEach(el => observer.observe(el));
+</script>
+
+</body>
+</html>
