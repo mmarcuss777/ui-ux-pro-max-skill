@@ -1,36 +1,113 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# Founder OS
 
-## Getting Started
+A lean personal founder OS — a mobile-first web app where a solo founder tracks
+business experiments, fitness, learning and money, and gets a hard weekly verdict
+from AI. Built with Next.js 14, Tailwind CSS, shadcn/ui, Supabase and the
+Anthropic API.
 
-First, run the development server:
+Written for an owner with no programming background. Follow the steps in order;
+a fresh setup takes about 15 minutes.
+
+## What you need
+
+- [Node.js](https://nodejs.org) 18 or newer installed on your computer
+- A free [Supabase](https://supabase.com) account (database + login)
+- An [Anthropic](https://console.anthropic.com) API key (for the AI verdicts)
+- A free [Vercel](https://vercel.com) account (for deploying online — optional)
+
+## 1. Install
+
+Open a terminal in this folder and run:
+
+```bash
+npm install
+```
+
+## 2. Create the Supabase project
+
+1. Go to [supabase.com](https://supabase.com) → **New project**. Pick any name
+   and a strong database password (you won't need the password again).
+2. Wait for the project to finish provisioning (~2 minutes).
+3. Open **SQL Editor** (left sidebar) → **New query**. Copy the entire contents
+   of `supabase/migrations/0001_init.sql` from this folder, paste it in, and
+   press **Run**. You should see "Success. No rows returned."
+4. Optional but recommended for a quick start: open **Authentication →
+   Sign In / Up → Email** and turn **Confirm email** off. With it on, every
+   signup must click a link in their inbox before logging in.
+
+## 3. Connect the app to Supabase
+
+1. In Supabase, open **Project Settings → API Keys**.
+2. Copy the example env file:
+
+   ```bash
+   cp .env.local.example .env.local
+   ```
+
+3. Open `.env.local` in any text editor and fill in:
+   - `NEXT_PUBLIC_SUPABASE_URL` — the **Project URL**
+   - `NEXT_PUBLIC_SUPABASE_ANON_KEY` — the **anon / public** key
+   - `SUPABASE_SERVICE_ROLE_KEY` — leave empty; the app doesn't use it yet
+   - `ANTHROPIC_API_KEY` — your key from
+     [console.anthropic.com](https://console.anthropic.com/settings/keys)
+
+Never commit `.env.local` or share the Anthropic / service-role keys — they are
+server-side secrets.
+
+## 4. Run it
 
 ```bash
 npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+Open [http://localhost:3000](http://localhost:3000), sign up, create your first
+workspace, and log your day. The Reality Check and Weekly Review buttons need
+the `ANTHROPIC_API_KEY` to be set.
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+## 5. Verify security (once)
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+Row Level Security keeps each user's data private. To prove it works:
 
-## Learn More
+1. Sign up two accounts (use two browsers or a private window), each creating a
+   workspace.
+2. In Supabase **Authentication → Users**, copy both user IDs.
+3. Open `supabase/rls_test.sql`, paste it into the SQL Editor, replace the two
+   placeholders, and run it. User A must see only their own workspaces, and the
+   final count of user B's rows visible to A must be **0**.
 
-To learn more about Next.js, take a look at the following resources:
+## 6. Sample data (optional)
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+To see the app full of realistic agency data: sign up first, then paste
+`supabase/seed.sql` into the SQL Editor and run it. It creates a "Demo Agency"
+workspace attached to the earliest-created user, with a week of logs,
+experiments, offers, contacts and a month of transactions.
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
+## 7. Deploy to Vercel (optional)
 
-## Deploy on Vercel
+1. Push this folder to a GitHub repository.
+2. On [vercel.com](https://vercel.com) → **Add New → Project** → import the
+   repository. If the app lives in a subfolder of the repo, set **Root
+   Directory** to that folder (e.g. `founder-os`).
+3. Under **Environment Variables**, add the same four variables from your
+   `.env.local`.
+4. Press **Deploy**.
+5. Back in Supabase, open **Authentication → URL Configuration** and set
+   **Site URL** to your new Vercel URL (e.g. `https://your-app.vercel.app`) so
+   email links point to the right place.
 
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
+## How the app is organized
 
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+| Page | What it does |
+|---|---|
+| Dashboard | Read-only "run today" view: daily score, action of the day, training/learning done, 7-day cashflow |
+| Log | Sub-60-second daily entry: score, energy, top action, note; also fitness and learning entries |
+| Lab | Experiments board: idea → testing → decided, with AI Reality Check per experiment |
+| Offers | Offers with automatic margin, plus leads/clients/suppliers |
+| Money | Transactions, running balance, 30-day trend |
+| Review | Sends the last 7 days to the AI and returns a hard verdict |
+| Workspace | Rename, toggle modules, pause/archive, set primary |
+
+Technical map: pages live in `app/(app)/`, reusable pieces in `components/`,
+Supabase clients and config in `lib/`, database schema in
+`supabase/migrations/`. The AI endpoint is `app/api/ai/reality-check/route.ts`
+and runs only on the server.
