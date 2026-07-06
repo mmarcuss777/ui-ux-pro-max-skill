@@ -1,5 +1,6 @@
 import { ReviewGenerator } from "@/components/review-generator"
 import { daysAgo, today } from "@/lib/dates"
+import { getT } from "@/lib/i18n-server"
 import { formatMoney } from "@/lib/money"
 import { createClient } from "@/lib/supabase/server"
 import { getWorkspaces, resolveActiveWorkspace } from "@/lib/workspace"
@@ -90,6 +91,7 @@ function buildSummary(
 
 export default async function ReviewPage() {
   const supabase = createClient()
+  const { d } = getT()
   const workspaces = await getWorkspaces()
   const active = resolveActiveWorkspace(workspaces)!
   const weekAgo = daysAgo(6)
@@ -100,6 +102,7 @@ export default async function ReviewPage() {
         .from("logs")
         .select("*")
         .gte("date", weekAgo)
+        .in("type", ["daily", "fitness", "learning"])
         .order("date"),
       supabase
         .from("experiments")
@@ -124,17 +127,15 @@ export default async function ReviewPage() {
   return (
     <div className="mx-auto max-w-2xl space-y-6">
       <div>
-        <h1 className="text-xl font-semibold text-ink">Weekly Review</h1>
-        <p className="text-sm text-muted-foreground">
-          Last 7 days of logs, experiments and money — judged, not celebrated.
-        </p>
+        <h1 className="text-2xl font-bold text-ink">{d.review.title}</h1>
+        <p className="text-sm text-muted-foreground">{d.review.subtitle}</p>
       </div>
 
       <ReviewGenerator summary={summary} />
 
-      <details className="rounded-lg border border-line p-4">
+      <details className="rounded-xl border border-line p-4">
         <summary className="cursor-pointer text-sm font-medium text-ink">
-          Data sent to the review
+          {d.review.dataSent}
         </summary>
         <pre className="mt-3 whitespace-pre-wrap font-sans text-xs text-muted-foreground">
           {summary}

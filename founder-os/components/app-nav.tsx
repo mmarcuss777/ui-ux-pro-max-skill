@@ -3,25 +3,30 @@
 import Link from "next/link"
 import { usePathname } from "next/navigation"
 
+import { useT } from "@/components/locale-provider"
 import { cn } from "@/lib/utils"
 
 const LINKS = [
-  { href: "/dashboard", label: "Dashboard" },
-  { href: "/log", label: "Log" },
-  { href: "/lab", label: "Lab" },
-  { href: "/offers", label: "Offers" },
-  { href: "/money", label: "Money" },
-  { href: "/review", label: "Review" },
-  { href: "/workspace", label: "Workspace" },
-]
+  { href: "/dashboard", key: "dashboard" },
+  { href: "/log", key: "log" },
+  { href: "/business", key: "business" },
+  { href: "/lab", key: "lab" },
+  { href: "/offers", key: "offers" },
+  { href: "/money", key: "money" },
+  { href: "/coach", key: "coach" },
+  { href: "/screen", key: "screen" },
+  { href: "/review", key: "review" },
+  { href: "/workspace", key: "workspace" },
+] as const
 
 export function AppNav() {
   const pathname = usePathname()
+  const d = useT()
 
   return (
     <nav
       aria-label="Main"
-      className="mx-auto flex max-w-5xl gap-1 overflow-x-auto px-4"
+      className="mx-auto flex max-w-5xl gap-1.5 overflow-x-auto px-4 pb-3 pt-1 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden"
     >
       {LINKS.map((link) => {
         const isActive = pathname.startsWith(link.href)
@@ -31,13 +36,13 @@ export function AppNav() {
             href={link.href}
             aria-current={isActive ? "page" : undefined}
             className={cn(
-              "flex h-11 shrink-0 items-center border-b-2 px-3 text-sm font-medium",
+              "flex h-9 shrink-0 items-center rounded-full px-4 text-sm font-medium transition-colors",
               isActive
-                ? "border-ink text-ink"
-                : "border-transparent text-muted-foreground hover:text-ink"
+                ? "bg-ink text-paper shadow-sm"
+                : "text-muted-foreground hover:bg-secondary hover:text-ink"
             )}
           >
-            {link.label}
+            {d.nav[link.key]}
           </Link>
         )
       })}

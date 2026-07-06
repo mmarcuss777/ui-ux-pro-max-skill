@@ -2,11 +2,13 @@ import { ContactsTab } from "@/components/contacts-tab"
 import { OffersTab } from "@/components/offers-tab"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { BUSINESS_TYPES, type BusinessType } from "@/lib/business-types"
+import { getT } from "@/lib/i18n-server"
 import { createClient } from "@/lib/supabase/server"
 import { getWorkspaces, resolveActiveWorkspace } from "@/lib/workspace"
 
 export default async function OffersPage() {
   const supabase = createClient()
+  const { d } = getT()
   const workspaces = await getWorkspaces()
   const active = resolveActiveWorkspace(workspaces)!
 
@@ -30,19 +32,17 @@ export default async function OffersPage() {
   return (
     <div className="space-y-6">
       <div>
-        <h1 className="text-xl font-semibold text-ink">Offers & Contacts</h1>
-        <p className="text-sm text-muted-foreground">
-          What you sell, and who you sell it to.
-        </p>
+        <h1 className="text-2xl font-bold text-ink">{d.offers.title}</h1>
+        <p className="text-sm text-muted-foreground">{d.offers.subtitle}</p>
       </div>
 
       <Tabs defaultValue="offers">
         <TabsList className="grid h-11 w-full max-w-xs grid-cols-2">
           <TabsTrigger value="offers" className="h-9">
-            Offers
+            {d.offers.offersTab}
           </TabsTrigger>
           <TabsTrigger value="contacts" className="h-9">
-            Contacts
+            {d.offers.contactsTab}
           </TabsTrigger>
         </TabsList>
         <TabsContent value="offers" className="mt-4">

@@ -4,6 +4,8 @@ import { useState } from "react"
 import Link from "next/link"
 import { useRouter } from "next/navigation"
 
+import { LanguageToggle } from "@/components/language-toggle"
+import { useT } from "@/components/locale-provider"
 import { createClient } from "@/lib/supabase/client"
 import { Button } from "@/components/ui/button"
 import {
@@ -18,6 +20,7 @@ import { Label } from "@/components/ui/label"
 
 export default function SignupPage() {
   const router = useRouter()
+  const d = useT()
   const [email, setEmail] = useState("")
   const [password, setPassword] = useState("")
   const [error, setError] = useState<string | null>(null)
@@ -45,21 +48,28 @@ export default function SignupPage() {
     }
 
     // Email confirmation is enabled on the Supabase project.
-    setMessage("Check your inbox to confirm your email, then log in.")
+    setMessage(d.auth.checkInbox)
     setLoading(false)
   }
 
   return (
-    <main className="flex min-h-dvh items-center justify-center p-4">
-      <Card className="w-full max-w-sm">
+    <main className="relative flex min-h-dvh items-center justify-center p-4">
+      <div className="absolute right-4 top-4">
+        <LanguageToggle />
+      </div>
+      <Card className="w-full max-w-sm shadow-sm">
         <CardHeader>
-          <CardTitle className="text-2xl text-ink">Founder OS</CardTitle>
-          <CardDescription>Create your account.</CardDescription>
+          <CardTitle className="text-3xl font-bold tracking-tight text-ink">
+            Nexa<span className="text-ok">.</span>
+          </CardTitle>
+          <CardDescription>
+            {d.app.slogan} {d.auth.signupSubtitle}
+          </CardDescription>
         </CardHeader>
         <CardContent>
           <form onSubmit={handleSubmit} className="space-y-4">
             <div className="space-y-2">
-              <Label htmlFor="email">Email</Label>
+              <Label htmlFor="email">{d.auth.email}</Label>
               <Input
                 id="email"
                 type="email"
@@ -70,7 +80,7 @@ export default function SignupPage() {
               />
             </div>
             <div className="space-y-2">
-              <Label htmlFor="password">Password</Label>
+              <Label htmlFor="password">{d.auth.password}</Label>
               <Input
                 id="password"
                 type="password"
@@ -80,20 +90,18 @@ export default function SignupPage() {
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
               />
-              <p className="text-xs text-muted-foreground">
-                At least 8 characters.
-              </p>
+              <p className="text-xs text-muted-foreground">{d.auth.min8}</p>
             </div>
             {error && <p className="text-sm text-danger">{error}</p>}
             {message && <p className="text-sm text-ok">{message}</p>}
             <Button type="submit" className="h-11 w-full" disabled={loading}>
-              {loading ? "Creating account…" : "Sign up"}
+              {loading ? d.auth.signingUp : d.auth.signUp}
             </Button>
           </form>
           <p className="mt-4 text-sm text-muted-foreground">
-            Already have an account?{" "}
+            {d.auth.haveAccount}{" "}
             <Link href="/login" className="font-medium text-ink underline">
-              Log in
+              {d.auth.logIn}
             </Link>
           </p>
         </CardContent>

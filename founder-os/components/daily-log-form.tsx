@@ -3,6 +3,7 @@
 import { useState } from "react"
 import { useRouter } from "next/navigation"
 
+import { useLocale, useT } from "@/components/locale-provider"
 import { createClient } from "@/lib/supabase/client"
 import { PrimaryCta } from "@/components/primary-cta"
 import { Checkbox } from "@/components/ui/checkbox"
@@ -18,6 +19,8 @@ const ENERGY_LEVELS = [1, 2, 3, 4, 5]
 
 export function DailyLogForm({ workspaceId }: { workspaceId: string }) {
   const router = useRouter()
+  const d = useT()
+  const locale = useLocale()
   const [type, setType] = useState<LogType>("daily")
   const [score, setScore] = useState(70)
   const [energy, setEnergy] = useState(3)
@@ -26,6 +29,7 @@ export function DailyLogForm({ workspaceId }: { workspaceId: string }) {
   const [topActionDone, setTopActionDone] = useState(false)
   const [saving, setSaving] = useState(false)
   const [saved, setSaved] = useState(false)
+  const [scoring, setScoring] = useState(false)
   const [error, setError] = useState<string | null>(null)
 
   async function handleSubmit(event: React.FormEvent) {
@@ -53,16 +57,20 @@ export function DailyLogForm({ workspaceId }: { workspaceId: string }) {
           }
         : { note: note.trim() }
 
-    const { error: insertError } = await supabase.from("logs").insert({
-      user_id: user.id,
-      workspace_id: workspaceId,
-      type,
-      score: type === "daily" ? score : null,
-      data,
-    })
+    const { data: inserted, error: insertError } = await supabase
+      .from("logs")
+      .insert({
+        user_id: user.id,
+        workspace_id: workspaceId,
+        type,
+        score: type === "daily" ? score : null,
+        data,
+      })
+      .select()
+      .single()
 
-    if (insertError) {
-      setError(insertError.message)
+    if (insertError || !inserted) {
+      setError(insertError?.message ?? d.common.error)
       setSaving(false)
       return
     }
@@ -74,6 +82,18 @@ export function DailyLogForm({ workspaceId }: { workspaceId: string }) {
     setSaved(true)
     setTimeout(() => setSaved(false), 3000)
     router.refresh()
+
+    // AI productivity score, applied in the background — the entry is already
+    // saved; the badge appears in the list once scoring completes.
+    setScoring(true)
+    fetch("/api/ai/productivity-score", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ logId: inserted.id, locale }),
+    })
+      .then(() => router.refresh())
+      .catch(() => undefined)
+      .finally(() => setScoring(false))
   }
 
   return (
@@ -81,13 +101,13 @@ export function DailyLogForm({ workspaceId }: { workspaceId: string }) {
       <Tabs value={type} onValueChange={(value) => setType(value as LogType)}>
         <TabsList className="grid h-11 w-full grid-cols-3">
           <TabsTrigger value="daily" className="h-9">
-            Daily
+            {d.labels.daily}
           </TabsTrigger>
           <TabsTrigger value="fitness" className="h-9">
-            Fitness
+            {d.labels.fitness}
           </TabsTrigger>
           <TabsTrigger value="learning" className="h-9">
-            Learning
+            {d.labels.learning}
           </TabsTrigger>
         </TabsList>
       </Tabs>
@@ -96,7 +116,7 @@ export function DailyLogForm({ workspaceId }: { workspaceId: string }) {
         <>
           <div className="space-y-2">
             <div className="flex items-baseline justify-between">
-              <Label htmlFor="score">Score</Label>
+              <Label htmlFor="score">{d.log.score}</Label>
               <span className="text-2xl font-semibold tabular-nums text-ink">
                 {score}
               </span>
@@ -107,13 +127,17 @@ export function DailyLogForm({ workspaceId }: { workspaceId: string }) {
               onValueChange={([value]) => setScore(value)}
               max={100}
               step={5}
-              aria-label="Daily score 0 to 100"
+              aria-label={d.log.score}
             />
           </div>
 
           <div className="space-y-2">
-            <Label>Energy</Label>
-            <div className="grid grid-cols-5 gap-2" role="radiogroup" aria-label="Energy 1 to 5">
+            <Label>{d.log.energy}</Label>
+            <div
+              className="grid grid-cols-5 gap-2"
+              role="radiogroup"
+              aria-label={d.log.energy}
+            >
               {ENERGY_LEVELS.map((level) => (
                 <button
                   key={level}
@@ -122,7 +146,7 @@ export function DailyLogForm({ workspaceId }: { workspaceId: string }) {
                   aria-checked={energy === level}
                   onClick={() => setEnergy(level)}
                   className={cn(
-                    "h-11 rounded-md border text-sm font-medium tabular-nums",
+                    "h-11 rounded-lg border text-sm font-medium tabular-nums transition-colors",
                     energy === level
                       ? "border-ink bg-ink text-paper"
                       : "border-line bg-card text-muted-foreground hover:text-ink"
@@ -135,11 +159,11 @@ export function DailyLogForm({ workspaceId }: { workspaceId: string }) {
           </div>
 
           <div className="space-y-2">
-            <Label htmlFor="top-action">Top action for today</Label>
+            <Label htmlFor="top-action">{d.log.topAction}</Label>
             <Input
               id="top-action"
               maxLength={120}
-              placeholder="The one move that matters"
+              placeholder={d.log.topActionPlaceholder}
               value={topAction}
               onChange={(e) => setTopAction(e.target.value)}
             />
@@ -148,7 +172,7 @@ export function DailyLogForm({ workspaceId }: { workspaceId: string }) {
                 checked={topActionDone}
                 onCheckedChange={(checked) => setTopActionDone(checked === true)}
               />
-              Top action done?
+              {d.log.topActionDone}
             </label>
           </div>
         </>
@@ -157,15 +181,15 @@ export function DailyLogForm({ workspaceId }: { workspaceId: string }) {
       <div className="space-y-2">
         <Label htmlFor="note">
           {type === "daily"
-            ? "Note"
+            ? d.log.note
             : type === "fitness"
-              ? "What did you train?"
-              : "What did you learn?"}
+              ? d.log.noteFitness
+              : d.log.noteLearning}
         </Label>
         <Input
           id="note"
           maxLength={200}
-          placeholder="One line is enough"
+          placeholder={d.log.notePlaceholder}
           value={note}
           onChange={(e) => setNote(e.target.value)}
         />
@@ -174,11 +198,16 @@ export function DailyLogForm({ workspaceId }: { workspaceId: string }) {
       {error && <p className="text-sm text-danger">{error}</p>}
       <div className="flex items-center gap-3">
         <PrimaryCta type="submit" className="w-full sm:w-auto" disabled={saving}>
-          {saving ? "Saving…" : "Add log"}
+          {saving ? d.common.saving : d.log.addLog}
         </PrimaryCta>
         {saved && (
           <span className="text-sm text-ok" role="status">
-            Saved
+            {d.common.saved}
+          </span>
+        )}
+        {scoring && (
+          <span className="text-sm text-muted-foreground" role="status">
+            {d.log.scoring}
           </span>
         )}
       </div>

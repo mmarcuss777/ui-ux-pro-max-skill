@@ -3,6 +3,7 @@
 import { useState } from "react"
 import { useRouter } from "next/navigation"
 
+import { useLocale, useT } from "@/components/locale-provider"
 import { createClient } from "@/lib/supabase/client"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
@@ -33,6 +34,8 @@ export function ExperimentCard({
   businessType: string
 }) {
   const router = useRouter()
+  const d = useT()
+  const locale = useLocale()
   const [checkOpen, setCheckOpen] = useState(false)
   const [checkResult, setCheckResult] = useState<string | null>(null)
   const [checkError, setCheckError] = useState<string | null>(null)
@@ -58,11 +61,12 @@ export function ExperimentCard({
         constraint: experiment.deadline
           ? `deadline ${experiment.deadline}, solo founder, minimal budget`
           : "solo founder, minimal budget",
+        locale,
       }),
     })
     const data = await response.json()
     if (!response.ok) {
-      setCheckError(data.error ?? "Reality check failed.")
+      setCheckError(data.error ?? d.common.error)
     } else {
       setCheckResult(data.result)
     }
@@ -80,7 +84,7 @@ export function ExperimentCard({
         <p className="text-sm font-medium text-ink">{experiment.hypothesis}</p>
         {experiment.metric && (
           <p className="text-xs text-muted-foreground">
-            Metric: {experiment.metric}
+            {d.lab.metricLabel}: {experiment.metric}
           </p>
         )}
         {experiment.deadline && (
@@ -91,13 +95,13 @@ export function ExperimentCard({
                 : "text-xs text-muted-foreground"
             }
           >
-            Deadline: {experiment.deadline}
-            {overdue && " — overdue"}
+            {d.lab.deadlineLabel}: {experiment.deadline}
+            {overdue && ` — ${d.lab.overdue}`}
           </p>
         )}
         {experiment.result && (
           <p className="text-xs text-muted-foreground">
-            Result: {experiment.result}
+            {d.lab.resultLabel}: {experiment.result}
           </p>
         )}
 
@@ -107,13 +111,13 @@ export function ExperimentCard({
               value={experiment.decision ?? undefined}
               onValueChange={(value) => updateExperiment({ decision: value })}
             >
-              <SelectTrigger className="h-9 w-[130px] text-xs">
-                <SelectValue placeholder="Decision…" />
+              <SelectTrigger className="h-9 w-[150px] text-xs">
+                <SelectValue placeholder={d.lab.decision} />
               </SelectTrigger>
               <SelectContent>
                 {DECISIONS.map((decision) => (
                   <SelectItem key={decision} value={decision}>
-                    {decision}
+                    {d.labels[decision]}
                   </SelectItem>
                 ))}
               </SelectContent>
@@ -134,7 +138,8 @@ export function ExperimentCard({
                     : "secondary"
                 }
               >
-                {experiment.decision}
+                {d.labels[experiment.decision as (typeof DECISIONS)[number]] ??
+                  experiment.decision}
               </Badge>
             )}
           </div>
@@ -146,12 +151,11 @@ export function ExperimentCard({
               className="h-9"
               onClick={() =>
                 updateExperiment({
-                  status:
-                    experiment.status === "idea" ? "testing" : "decided",
+                  status: experiment.status === "idea" ? "testing" : "decided",
                 })
               }
             >
-              {experiment.status === "idea" ? "Start testing" : "Decide"}
+              {experiment.status === "idea" ? d.lab.startTesting : d.lab.decide}
             </Button>
 
             <Dialog open={checkOpen} onOpenChange={setCheckOpen}>
@@ -162,16 +166,18 @@ export function ExperimentCard({
                   className="h-9"
                   onClick={runRealityCheck}
                 >
-                  Reality Check
+                  {d.lab.realityCheck}
                 </Button>
               </DialogTrigger>
               <DialogContent className="max-h-[80dvh] overflow-y-auto">
                 <DialogHeader>
-                  <DialogTitle className="text-ink">Reality Check</DialogTitle>
+                  <DialogTitle className="text-ink">
+                    {d.lab.realityCheck}
+                  </DialogTitle>
                 </DialogHeader>
                 {checking && (
                   <p className="text-sm text-muted-foreground" role="status">
-                    Analyzing…
+                    {d.lab.analyzing}
                   </p>
                 )}
                 {checkError && (

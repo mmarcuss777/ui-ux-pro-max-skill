@@ -26,7 +26,7 @@
     --border: 220 19% 91%;
     --input: 220 19% 88%;
     --ring: 221 47% 20%;
-    --radius: 0.5rem;
+    --radius: 0.75rem;
   }
 }
 
@@ -36,5 +36,17 @@
   }
   body {
     @apply bg-background text-foreground antialiased;
+  }
+  h1,
+  h2,
+  h3 {
+    @apply tracking-tight;
+  }
+}
+
+@layer utilities {
+  /* Soft elevated surface used across the app's cards */
+  .surface {
+    @apply rounded-xl border border-line/70 bg-card shadow-sm;
   }
 }

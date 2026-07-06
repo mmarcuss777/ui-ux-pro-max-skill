@@ -3,6 +3,7 @@
 import { useState } from "react"
 import { useRouter } from "next/navigation"
 
+import { useT } from "@/components/locale-provider"
 import { createClient } from "@/lib/supabase/client"
 import {
   ALL_MODULES,
@@ -26,6 +27,7 @@ const WORKSPACE_COOKIE = "fos_workspace"
 
 export default function OnboardingPage() {
   const router = useRouter()
+  const d = useT()
   const [businessType, setBusinessType] = useState<BusinessType>("agency")
   const [customModules, setCustomModules] = useState<string[]>([])
   const [name, setName] = useState("")
@@ -76,7 +78,7 @@ export default function OnboardingPage() {
       .single()
 
     if (insertError || !workspace) {
-      setError(insertError?.message ?? "Could not create workspace.")
+      setError(insertError?.message ?? d.common.error)
       setLoading(false)
       return
     }
@@ -88,32 +90,27 @@ export default function OnboardingPage() {
 
   return (
     <main className="mx-auto flex min-h-dvh w-full max-w-lg flex-col justify-center p-4">
-      <Card>
+      <Card className="shadow-sm">
         <CardHeader>
           <CardTitle className="text-2xl text-ink">
-            Set up your workspace
+            {d.onboarding.title}
           </CardTitle>
-          <CardDescription>
-            One workspace = one business. You can add more later.
-          </CardDescription>
+          <CardDescription>{d.onboarding.subtitle}</CardDescription>
         </CardHeader>
         <CardContent>
           <form onSubmit={handleSubmit} className="space-y-6">
             <fieldset className="space-y-2">
-              <legend className="text-sm font-medium">Business type</legend>
-              {(
-                Object.entries(BUSINESS_TYPES) as [
-                  BusinessType,
-                  (typeof BUSINESS_TYPES)[BusinessType],
-                ][]
-              ).map(([key, config]) => (
+              <legend className="text-sm font-medium">
+                {d.onboarding.businessType}
+              </legend>
+              {(Object.keys(BUSINESS_TYPES) as BusinessType[]).map((key) => (
                 <label
                   key={key}
                   className={cn(
-                    "flex min-h-11 cursor-pointer items-center gap-3 rounded-lg border p-3",
+                    "flex min-h-11 cursor-pointer items-center gap-3 rounded-xl border p-3 transition-colors",
                     businessType === key
                       ? "border-ink bg-secondary"
-                      : "border-line"
+                      : "border-line hover:border-ink/40"
                   )}
                 >
                   <input
@@ -124,36 +121,40 @@ export default function OnboardingPage() {
                     onChange={() => setBusinessType(key)}
                     className="h-4 w-4 accent-ink"
                   />
-                  <span className="text-sm font-medium">{config.label}</span>
+                  <span className="text-sm font-medium">{d.labels[key]}</span>
                 </label>
               ))}
             </fieldset>
 
             {businessType === "custom" && (
               <fieldset className="space-y-2">
-                <legend className="text-sm font-medium">Modules</legend>
+                <legend className="text-sm font-medium">
+                  {d.onboarding.modules}
+                </legend>
                 {ALL_MODULES.map((module) => (
                   <label
                     key={module}
-                    className="flex min-h-11 cursor-pointer items-center gap-3 rounded-lg border border-line p-3"
+                    className="flex min-h-11 cursor-pointer items-center gap-3 rounded-xl border border-line p-3"
                   >
                     <Checkbox
                       checked={customModules.includes(module)}
                       onCheckedChange={() => toggleModule(module)}
                     />
-                    <span className="text-sm capitalize">{module}</span>
+                    <span className="text-sm capitalize">
+                      {d.labels[module]}
+                    </span>
                   </label>
                 ))}
               </fieldset>
             )}
 
             <div className="space-y-2">
-              <Label htmlFor="name">Workspace name</Label>
+              <Label htmlFor="name">{d.onboarding.name}</Label>
               <Input
                 id="name"
                 required
                 maxLength={60}
-                placeholder="e.g. My Agency"
+                placeholder={d.onboarding.namePlaceholder}
                 value={name}
                 onChange={(e) => setName(e.target.value)}
               />
@@ -161,7 +162,7 @@ export default function OnboardingPage() {
 
             {error && <p className="text-sm text-danger">{error}</p>}
             <PrimaryCta type="submit" className="w-full" disabled={loading}>
-              {loading ? "Creating…" : "Create workspace"}
+              {loading ? d.onboarding.creating : d.onboarding.create}
             </PrimaryCta>
           </form>
         </CardContent>

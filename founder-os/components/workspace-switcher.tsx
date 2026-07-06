@@ -3,6 +3,7 @@
 import { useRouter } from "next/navigation"
 import { CaretSortIcon, CheckIcon, PlusIcon } from "@radix-ui/react-icons"
 
+import { useT } from "@/components/locale-provider"
 import { Button } from "@/components/ui/button"
 import {
   DropdownMenu,
@@ -28,6 +29,7 @@ export function WorkspaceSwitcher({
   activeId: string
 }) {
   const router = useRouter()
+  const d = useT()
 
   function switchTo(id: string) {
     document.cookie = `${WORKSPACE_COOKIE}=${id}; path=/; max-age=31536000; samesite=lax`
@@ -39,8 +41,10 @@ export function WorkspaceSwitcher({
   return (
     <DropdownMenu>
       <DropdownMenuTrigger asChild>
-        <Button variant="outline" className="h-10 max-w-[180px] gap-1">
-          <span className="truncate">{active?.name ?? "Workspace"}</span>
+        <Button variant="outline" className="h-9 max-w-[160px] gap-1 rounded-full">
+          <span className="truncate">
+            {active?.name ?? d.switcher.workspace}
+          </span>
           <CaretSortIcon className="h-4 w-4 shrink-0 text-muted-foreground" />
         </Button>
       </DropdownMenuTrigger>
@@ -65,7 +69,7 @@ export function WorkspaceSwitcher({
         <DropdownMenuSeparator />
         <DropdownMenuItem onSelect={() => router.push("/onboarding")}>
           <PlusIcon className="mr-2 h-4 w-4" />
-          New workspace
+          {d.switcher.newWorkspace}
         </DropdownMenuItem>
       </DropdownMenuContent>
     </DropdownMenu>

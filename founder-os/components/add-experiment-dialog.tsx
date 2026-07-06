@@ -3,6 +3,7 @@
 import { useState } from "react"
 import { useRouter } from "next/navigation"
 
+import { useT } from "@/components/locale-provider"
 import { createClient } from "@/lib/supabase/client"
 import { PrimaryCta } from "@/components/primary-cta"
 import { Button } from "@/components/ui/button"
@@ -19,6 +20,7 @@ import { Textarea } from "@/components/ui/textarea"
 
 export function AddExperimentDialog({ workspaceId }: { workspaceId: string }) {
   const router = useRouter()
+  const d = useT()
   const [open, setOpen] = useState(false)
   const [hypothesis, setHypothesis] = useState("")
   const [metric, setMetric] = useState("")
@@ -56,36 +58,36 @@ export function AddExperimentDialog({ workspaceId }: { workspaceId: string }) {
   return (
     <Dialog open={open} onOpenChange={setOpen}>
       <DialogTrigger asChild>
-        <PrimaryCta>Add experiment</PrimaryCta>
+        <PrimaryCta>{d.lab.addExperiment}</PrimaryCta>
       </DialogTrigger>
       <DialogContent>
         <DialogHeader>
-          <DialogTitle className="text-ink">New experiment</DialogTitle>
+          <DialogTitle className="text-ink">{d.lab.newExperiment}</DialogTitle>
         </DialogHeader>
         <form onSubmit={handleSubmit} className="space-y-4">
           <div className="space-y-2">
-            <Label htmlFor="hypothesis">Hypothesis</Label>
+            <Label htmlFor="hypothesis">{d.lab.hypothesis}</Label>
             <Textarea
               id="hypothesis"
               required
               maxLength={500}
-              placeholder="If I do X, then Y will happen because Z"
+              placeholder={d.lab.hypothesisPlaceholder}
               value={hypothesis}
               onChange={(e) => setHypothesis(e.target.value)}
             />
           </div>
           <div className="space-y-2">
-            <Label htmlFor="metric">Metric</Label>
+            <Label htmlFor="metric">{d.lab.metric}</Label>
             <Input
               id="metric"
               maxLength={120}
-              placeholder="e.g. 5 discovery calls booked"
+              placeholder={d.lab.metricPlaceholder}
               value={metric}
               onChange={(e) => setMetric(e.target.value)}
             />
           </div>
           <div className="space-y-2">
-            <Label htmlFor="deadline">Deadline</Label>
+            <Label htmlFor="deadline">{d.lab.deadline}</Label>
             <Input
               id="deadline"
               type="date"
@@ -95,7 +97,7 @@ export function AddExperimentDialog({ workspaceId }: { workspaceId: string }) {
           </div>
           {error && <p className="text-sm text-danger">{error}</p>}
           <Button type="submit" className="h-11 w-full" disabled={saving}>
-            {saving ? "Saving…" : "Save experiment"}
+            {saving ? d.common.saving : d.lab.saveExperiment}
           </Button>
         </form>
       </DialogContent>

@@ -1,17 +1,13 @@
 import { AddExperimentDialog } from "@/components/add-experiment-dialog"
 import { ExperimentCard } from "@/components/experiment-card"
+import { getT } from "@/lib/i18n-server"
 import { createClient } from "@/lib/supabase/server"
 import { getWorkspaces, resolveActiveWorkspace } from "@/lib/workspace"
 import type { Experiment } from "@/types/db"
 
-const COLUMNS = [
-  { status: "idea", label: "Ideas" },
-  { status: "testing", label: "Testing" },
-  { status: "decided", label: "Decided" },
-] as const
-
 export default async function LabPage() {
   const supabase = createClient()
+  const { d } = getT()
   const workspaces = await getWorkspaces()
   const active = resolveActiveWorkspace(workspaces)!
 
@@ -22,21 +18,24 @@ export default async function LabPage() {
     .order("created_at", { ascending: false })
 
   const all: Experiment[] = experiments ?? []
+  const columns = [
+    { status: "idea", label: d.lab.ideas },
+    { status: "testing", label: d.lab.testing },
+    { status: "decided", label: d.lab.decided },
+  ] as const
 
   return (
     <div className="space-y-6">
       <div className="flex flex-wrap items-center justify-between gap-3">
         <div>
-          <h1 className="text-xl font-semibold text-ink">Business Lab</h1>
-          <p className="text-sm text-muted-foreground">
-            Idea → experiment → decision. Nothing lives here forever.
-          </p>
+          <h1 className="text-2xl font-bold text-ink">{d.lab.title}</h1>
+          <p className="text-sm text-muted-foreground">{d.lab.subtitle}</p>
         </div>
         <AddExperimentDialog workspaceId={active.id} />
       </div>
 
       <div className="grid gap-4 md:grid-cols-3">
-        {COLUMNS.map((column) => {
+        {columns.map((column) => {
           const items = all.filter((e) => e.status === column.status)
           return (
             <section key={column.status} aria-label={column.label}>
@@ -46,10 +45,8 @@ export default async function LabPage() {
               </h2>
               <div className="space-y-3">
                 {items.length === 0 ? (
-                  <p className="rounded-lg border border-dashed border-line p-4 text-sm text-muted-foreground">
-                    {column.status === "idea"
-                      ? "No ideas yet. Add one."
-                      : "Empty."}
+                  <p className="rounded-xl border border-dashed border-line p-4 text-sm text-muted-foreground">
+                    {column.status === "idea" ? d.lab.noIdeas : d.lab.empty}
                   </p>
                 ) : (
                   items.map((experiment) => (

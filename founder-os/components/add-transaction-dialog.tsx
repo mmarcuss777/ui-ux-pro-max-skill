@@ -3,6 +3,7 @@
 import { useState } from "react"
 import { useRouter } from "next/navigation"
 
+import { useT } from "@/components/locale-provider"
 import { createClient } from "@/lib/supabase/client"
 import { today } from "@/lib/dates"
 import { PrimaryCta } from "@/components/primary-cta"
@@ -20,6 +21,7 @@ import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs"
 
 export function AddTransactionDialog({ workspaceId }: { workspaceId: string }) {
   const router = useRouter()
+  const d = useT()
   const [open, setOpen] = useState(false)
   const [type, setType] = useState<"in" | "out">("in")
   const [amount, setAmount] = useState("")
@@ -71,25 +73,30 @@ export function AddTransactionDialog({ workspaceId }: { workspaceId: string }) {
   return (
     <Dialog open={open} onOpenChange={setOpen}>
       <DialogTrigger asChild>
-        <PrimaryCta>Add transaction</PrimaryCta>
+        <PrimaryCta>{d.money.addTransaction}</PrimaryCta>
       </DialogTrigger>
       <DialogContent>
         <DialogHeader>
-          <DialogTitle className="text-ink">New transaction</DialogTitle>
+          <DialogTitle className="text-ink">
+            {d.money.newTransaction}
+          </DialogTitle>
         </DialogHeader>
         <form onSubmit={handleSubmit} className="space-y-4">
-          <Tabs value={type} onValueChange={(value) => setType(value as "in" | "out")}>
+          <Tabs
+            value={type}
+            onValueChange={(value) => setType(value as "in" | "out")}
+          >
             <TabsList className="grid h-11 w-full grid-cols-2">
               <TabsTrigger value="in" className="h-9">
-                Money in
+                {d.money.moneyIn}
               </TabsTrigger>
               <TabsTrigger value="out" className="h-9">
-                Money out
+                {d.money.moneyOut}
               </TabsTrigger>
             </TabsList>
           </Tabs>
           <div className="space-y-2">
-            <Label htmlFor="tx-amount">Amount</Label>
+            <Label htmlFor="tx-amount">{d.money.amount}</Label>
             <Input
               id="tx-amount"
               type="number"
@@ -104,17 +111,17 @@ export function AddTransactionDialog({ workspaceId }: { workspaceId: string }) {
           </div>
           <div className="grid grid-cols-2 gap-3">
             <div className="space-y-2">
-              <Label htmlFor="tx-category">Category</Label>
+              <Label htmlFor="tx-category">{d.money.category}</Label>
               <Input
                 id="tx-category"
                 maxLength={60}
-                placeholder="e.g. client work"
+                placeholder={d.money.categoryPlaceholder}
                 value={category}
                 onChange={(e) => setCategory(e.target.value)}
               />
             </div>
             <div className="space-y-2">
-              <Label htmlFor="tx-date">Date</Label>
+              <Label htmlFor="tx-date">{d.money.date}</Label>
               <Input
                 id="tx-date"
                 type="date"
@@ -125,7 +132,7 @@ export function AddTransactionDialog({ workspaceId }: { workspaceId: string }) {
             </div>
           </div>
           <div className="space-y-2">
-            <Label htmlFor="tx-note">Note</Label>
+            <Label htmlFor="tx-note">{d.money.note}</Label>
             <Input
               id="tx-note"
               maxLength={200}
@@ -135,7 +142,7 @@ export function AddTransactionDialog({ workspaceId }: { workspaceId: string }) {
           </div>
           {error && <p className="text-sm text-danger">{error}</p>}
           <Button type="submit" className="h-11 w-full" disabled={saving}>
-            {saving ? "Saving…" : "Save transaction"}
+            {saving ? d.common.saving : d.money.saveTransaction}
           </Button>
         </form>
       </DialogContent>

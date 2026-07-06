@@ -6,7 +6,7 @@ import { useLocale, useT } from "@/components/locale-provider"
 import { PrimaryCta } from "@/components/primary-cta"
 import { Card, CardContent } from "@/components/ui/card"
 
-export function ReviewGenerator({ summary }: { summary: string }) {
+export function CoachGenerator() {
   const d = useT()
   const locale = useLocale()
   const [result, setResult] = useState<string | null>(null)
@@ -16,14 +16,14 @@ export function ReviewGenerator({ summary }: { summary: string }) {
   async function generate() {
     setLoading(true)
     setError(null)
-    const response = await fetch("/api/ai/reality-check", {
+    const response = await fetch("/api/ai/coach", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ mode: "weekly-review", summary, locale }),
+      body: JSON.stringify({ locale }),
     })
     const data = await response.json()
     if (!response.ok) {
-      setError(data.error ?? d.review.failed)
+      setError(data.error ?? d.coach.failed)
     } else {
       setResult(data.result)
     }
@@ -32,9 +32,12 @@ export function ReviewGenerator({ summary }: { summary: string }) {
 
   return (
     <div className="space-y-4">
-      <PrimaryCta onClick={generate} disabled={loading}>
-        {loading ? d.review.generating : d.review.generate}
-      </PrimaryCta>
+      <div className="flex flex-wrap items-center gap-3">
+        <PrimaryCta onClick={generate} disabled={loading}>
+          {loading ? d.coach.generating : d.coach.generate}
+        </PrimaryCta>
+        <p className="text-xs text-muted-foreground">{d.coach.note}</p>
+      </div>
 
       {error && <p className="text-sm text-danger">{error}</p>}
 

@@ -1,8 +1,10 @@
 import { WorkspaceForm } from "@/components/workspace-form"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
+import { getT } from "@/lib/i18n-server"
 import { getWorkspaces, resolveActiveWorkspace } from "@/lib/workspace"
 
 export default async function WorkspacePage() {
+  const { d } = getT()
   const workspaces = await getWorkspaces()
   const active = resolveActiveWorkspace(workspaces)!
   const others = workspaces.filter((w) => w.id !== active.id)
@@ -10,9 +12,9 @@ export default async function WorkspacePage() {
   return (
     <div className="mx-auto max-w-lg space-y-6">
       <div>
-        <h1 className="text-xl font-semibold text-ink">Workspace</h1>
+        <h1 className="text-2xl font-bold text-ink">{d.workspace.title}</h1>
         <p className="text-sm text-muted-foreground">
-          The active project: {active.name}
+          {d.workspace.active} {active.name}
         </p>
       </div>
 
@@ -21,7 +23,7 @@ export default async function WorkspacePage() {
       {others.length > 0 && (
         <Card>
           <CardHeader className="pb-3">
-            <CardTitle className="text-base">Other workspaces</CardTitle>
+            <CardTitle className="text-base">{d.workspace.others}</CardTitle>
           </CardHeader>
           <CardContent>
             <ul className="divide-y divide-line">
@@ -38,7 +40,7 @@ export default async function WorkspacePage() {
               ))}
             </ul>
             <p className="mt-3 text-xs text-muted-foreground">
-              Switch workspaces from the header.
+              {d.workspace.switchHint}
             </p>
           </CardContent>
         </Card>

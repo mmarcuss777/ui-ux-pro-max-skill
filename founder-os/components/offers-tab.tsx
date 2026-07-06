@@ -3,6 +3,7 @@
 import { useState } from "react"
 import { useRouter } from "next/navigation"
 
+import { useT } from "@/components/locale-provider"
 import { createClient } from "@/lib/supabase/client"
 import { formatMoney } from "@/lib/money"
 import { PrimaryCta } from "@/components/primary-cta"
@@ -29,6 +30,8 @@ import type { Offer } from "@/types/db"
 
 const STATUSES = ["draft", "active", "retired"] as const
 
+type LabelKey = "product" | "service" | "investment" | "draft" | "active" | "retired"
+
 export function OffersTab({
   offers,
   workspaceId,
@@ -39,6 +42,7 @@ export function OffersTab({
   offerTypes: readonly string[]
 }) {
   const router = useRouter()
+  const d = useT()
   const [open, setOpen] = useState(false)
   const [type, setType] = useState(offerTypes[0])
   const [name, setName] = useState("")
@@ -46,6 +50,10 @@ export function OffersTab({
   const [price, setPrice] = useState("")
   const [error, setError] = useState<string | null>(null)
   const [saving, setSaving] = useState(false)
+
+  function label(value: string): string {
+    return d.labels[value as LabelKey] ?? value
+  }
 
   async function handleSubmit(event: React.FormEvent) {
     event.preventDefault()
@@ -85,15 +93,15 @@ export function OffersTab({
     <div className="space-y-4">
       <Dialog open={open} onOpenChange={setOpen}>
         <DialogTrigger asChild>
-          <PrimaryCta>Add offer</PrimaryCta>
+          <PrimaryCta>{d.offers.addOffer}</PrimaryCta>
         </DialogTrigger>
         <DialogContent>
           <DialogHeader>
-            <DialogTitle className="text-ink">New offer</DialogTitle>
+            <DialogTitle className="text-ink">{d.offers.newOffer}</DialogTitle>
           </DialogHeader>
           <form onSubmit={handleSubmit} className="space-y-4">
             <div className="space-y-2">
-              <Label htmlFor="offer-type">Type</Label>
+              <Label htmlFor="offer-type">{d.offers.type}</Label>
               <Select value={type} onValueChange={setType}>
                 <SelectTrigger id="offer-type">
                   <SelectValue />
@@ -101,14 +109,14 @@ export function OffersTab({
                 <SelectContent>
                   {offerTypes.map((offerType) => (
                     <SelectItem key={offerType} value={offerType}>
-                      {offerType}
+                      {label(offerType)}
                     </SelectItem>
                   ))}
                 </SelectContent>
               </Select>
             </div>
             <div className="space-y-2">
-              <Label htmlFor="offer-name">Name</Label>
+              <Label htmlFor="offer-name">{d.offers.name}</Label>
               <Input
                 id="offer-name"
                 required
@@ -119,7 +127,7 @@ export function OffersTab({
             </div>
             <div className="grid grid-cols-2 gap-3">
               <div className="space-y-2">
-                <Label htmlFor="offer-cost">Cost</Label>
+                <Label htmlFor="offer-cost">{d.offers.cost}</Label>
                 <Input
                   id="offer-cost"
                   type="number"
@@ -132,7 +140,7 @@ export function OffersTab({
                 />
               </div>
               <div className="space-y-2">
-                <Label htmlFor="offer-price">Price</Label>
+                <Label htmlFor="offer-price">{d.offers.price}</Label>
                 <Input
                   id="offer-price"
                   type="number"
@@ -146,19 +154,19 @@ export function OffersTab({
               </div>
             </div>
             <p className="text-xs text-muted-foreground">
-              Margin is calculated automatically: price − cost.
+              {d.offers.marginNote}
             </p>
             {error && <p className="text-sm text-danger">{error}</p>}
             <Button type="submit" className="h-11 w-full" disabled={saving}>
-              {saving ? "Saving…" : "Save offer"}
+              {saving ? d.common.saving : d.offers.saveOffer}
             </Button>
           </form>
         </DialogContent>
       </Dialog>
 
       {offers.length === 0 ? (
-        <p className="rounded-lg border border-dashed border-line p-4 text-sm text-muted-foreground">
-          No offers yet.
+        <p className="rounded-xl border border-dashed border-line p-4 text-sm text-muted-foreground">
+          {d.offers.noOffers}
         </p>
       ) : (
         <div className="space-y-3">
@@ -172,11 +180,9 @@ export function OffersTab({
                       {offer.name}
                     </p>
                     <p className="mt-1 flex items-center gap-2 text-xs text-muted-foreground">
-                      <Badge variant="outline" className="capitalize">
-                        {offer.type}
-                      </Badge>
-                      {formatMoney(offer.cost ?? 0)} cost ·{" "}
-                      {formatMoney(offer.price ?? 0)} price
+                      <Badge variant="outline">{label(offer.type)}</Badge>
+                      {formatMoney(offer.cost ?? 0)} {d.offers.costWord} ·{" "}
+                      {formatMoney(offer.price ?? 0)} {d.offers.priceWord}
                     </p>
                   </div>
                   <div className="flex items-center gap-3">
@@ -193,13 +199,13 @@ export function OffersTab({
                       value={offer.status}
                       onValueChange={(status) => updateStatus(offer.id, status)}
                     >
-                      <SelectTrigger className="h-9 w-[110px] text-xs">
+                      <SelectTrigger className="h-9 w-[130px] text-xs">
                         <SelectValue />
                       </SelectTrigger>
                       <SelectContent>
                         {STATUSES.map((status) => (
                           <SelectItem key={status} value={status}>
-                            {status}
+                            {label(status)}
                           </SelectItem>
                         ))}
                       </SelectContent>

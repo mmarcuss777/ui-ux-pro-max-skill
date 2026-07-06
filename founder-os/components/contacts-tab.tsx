@@ -3,6 +3,7 @@
 import { useState } from "react"
 import { useRouter } from "next/navigation"
 
+import { useT } from "@/components/locale-provider"
 import { createClient } from "@/lib/supabase/client"
 import { PrimaryCta } from "@/components/primary-cta"
 import { Badge } from "@/components/ui/badge"
@@ -26,6 +27,8 @@ import {
 } from "@/components/ui/select"
 import type { Contact } from "@/types/db"
 
+type LabelKey = "lead" | "client" | "supplier"
+
 export function ContactsTab({
   contacts,
   workspaceId,
@@ -36,6 +39,7 @@ export function ContactsTab({
   contactTypes: readonly string[]
 }) {
   const router = useRouter()
+  const d = useT()
   const [open, setOpen] = useState(false)
   const [contactType, setContactType] = useState(contactTypes[0])
   const [name, setName] = useState("")
@@ -44,6 +48,10 @@ export function ContactsTab({
   const [nextStep, setNextStep] = useState("")
   const [error, setError] = useState<string | null>(null)
   const [saving, setSaving] = useState(false)
+
+  function label(value: string): string {
+    return d.labels[value as LabelKey] ?? value
+  }
 
   async function handleSubmit(event: React.FormEvent) {
     event.preventDefault()
@@ -79,15 +87,17 @@ export function ContactsTab({
     <div className="space-y-4">
       <Dialog open={open} onOpenChange={setOpen}>
         <DialogTrigger asChild>
-          <PrimaryCta>Add contact</PrimaryCta>
+          <PrimaryCta>{d.offers.addContact}</PrimaryCta>
         </DialogTrigger>
         <DialogContent>
           <DialogHeader>
-            <DialogTitle className="text-ink">New contact</DialogTitle>
+            <DialogTitle className="text-ink">
+              {d.offers.newContact}
+            </DialogTitle>
           </DialogHeader>
           <form onSubmit={handleSubmit} className="space-y-4">
             <div className="space-y-2">
-              <Label htmlFor="contact-type">Type</Label>
+              <Label htmlFor="contact-type">{d.offers.type}</Label>
               <Select value={contactType} onValueChange={setContactType}>
                 <SelectTrigger id="contact-type">
                   <SelectValue />
@@ -95,14 +105,14 @@ export function ContactsTab({
                 <SelectContent>
                   {contactTypes.map((type) => (
                     <SelectItem key={type} value={type}>
-                      {type}
+                      {label(type)}
                     </SelectItem>
                   ))}
                 </SelectContent>
               </Select>
             </div>
             <div className="space-y-2">
-              <Label htmlFor="contact-name">Name</Label>
+              <Label htmlFor="contact-name">{d.offers.name}</Label>
               <Input
                 id="contact-name"
                 required
@@ -112,7 +122,7 @@ export function ContactsTab({
               />
             </div>
             <div className="space-y-2">
-              <Label htmlFor="contact-detail">Email / phone / handle</Label>
+              <Label htmlFor="contact-detail">{d.offers.contactDetail}</Label>
               <Input
                 id="contact-detail"
                 maxLength={120}
@@ -121,36 +131,36 @@ export function ContactsTab({
               />
             </div>
             <div className="space-y-2">
-              <Label htmlFor="contact-stage">Stage</Label>
+              <Label htmlFor="contact-stage">{d.offers.stage}</Label>
               <Input
                 id="contact-stage"
                 maxLength={60}
-                placeholder="e.g. contacted, proposal sent"
+                placeholder={d.offers.stagePlaceholder}
                 value={stage}
                 onChange={(e) => setStage(e.target.value)}
               />
             </div>
             <div className="space-y-2">
-              <Label htmlFor="contact-next">Next step</Label>
+              <Label htmlFor="contact-next">{d.offers.nextStep}</Label>
               <Input
                 id="contact-next"
                 maxLength={120}
-                placeholder="e.g. follow up on Friday"
+                placeholder={d.offers.nextStepPlaceholder}
                 value={nextStep}
                 onChange={(e) => setNextStep(e.target.value)}
               />
             </div>
             {error && <p className="text-sm text-danger">{error}</p>}
             <Button type="submit" className="h-11 w-full" disabled={saving}>
-              {saving ? "Saving…" : "Save contact"}
+              {saving ? d.common.saving : d.offers.saveContact}
             </Button>
           </form>
         </DialogContent>
       </Dialog>
 
       {contacts.length === 0 ? (
-        <p className="rounded-lg border border-dashed border-line p-4 text-sm text-muted-foreground">
-          No contacts yet.
+        <p className="rounded-xl border border-dashed border-line p-4 text-sm text-muted-foreground">
+          {d.offers.noContacts}
         </p>
       ) : (
         <div className="space-y-3">
@@ -159,9 +169,7 @@ export function ContactsTab({
               <CardContent className="space-y-1 p-4">
                 <div className="flex flex-wrap items-center gap-2">
                   <p className="text-sm font-medium text-ink">{person.name}</p>
-                  <Badge variant="outline" className="capitalize">
-                    {person.contact_type}
-                  </Badge>
+                  <Badge variant="outline">{label(person.contact_type)}</Badge>
                   {person.stage && (
                     <Badge variant="secondary">{person.stage}</Badge>
                   )}
@@ -172,7 +180,9 @@ export function ContactsTab({
                   </p>
                 )}
                 {person.next_step && (
-                  <p className="text-xs text-ink">Next: {person.next_step}</p>
+                  <p className="text-xs text-ink">
+                    {d.offers.next} {person.next_step}
+                  </p>
                 )}
               </CardContent>
             </Card>

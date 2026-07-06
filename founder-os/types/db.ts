@@ -22,6 +22,7 @@ export type Database = {
           active_modules: string[]
           status: string
           is_primary: boolean
+          goals: string | null
           created_at: string
         }
         Insert: {
@@ -32,6 +33,7 @@ export type Database = {
           active_modules?: string[]
           status?: string
           is_primary?: boolean
+          goals?: string | null
           created_at?: string
         }
         Update: {
@@ -42,6 +44,7 @@ export type Database = {
           active_modules?: string[]
           status?: string
           is_primary?: boolean
+          goals?: string | null
           created_at?: string
         }
         Relationships: []

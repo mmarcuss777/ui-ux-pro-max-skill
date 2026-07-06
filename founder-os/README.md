@@ -1,9 +1,10 @@
-# Founder OS
+# Nexa
 
-A lean personal founder OS — a mobile-first web app where a solo founder tracks
-business experiments, fitness, learning and money, and gets a hard weekly verdict
-from AI. Built with Next.js 14, Tailwind CSS, shadcn/ui, Supabase and the
-Anthropic API.
+Momentum, measured. A mobile-first web app where a solo founder tracks
+business experiments, fitness, learning, money and screen time — with AI that
+scores every activity against your goals, coaches you weekly, and audits where
+your phone steals your time. Built with Next.js 14, Tailwind CSS, shadcn/ui,
+Supabase and the Anthropic API. English/Slovak switchable UI.
 
 Written for an owner with no programming background. Follow the steps in order;
 a fresh setup takes about 15 minutes.
@@ -30,7 +31,8 @@ npm install
 2. Wait for the project to finish provisioning (~2 minutes).
 3. Open **SQL Editor** (left sidebar) → **New query**. Copy the entire contents
    of `supabase/migrations/0001_init.sql` from this folder, paste it in, and
-   press **Run**. You should see "Success. No rows returned."
+   press **Run**. You should see "Success. No rows returned." Then run
+   `supabase/migrations/0002_goals.sql` the same way.
 4. Optional but recommended for a quick start: open **Authentication →
    Sign In / Up → Email** and turn **Confirm email** off. With it on, every
    signup must click a link in their inbox before logging in.
@@ -99,13 +101,18 @@ experiments, offers, contacts and a month of transactions.
 
 | Page | What it does |
 |---|---|
-| Dashboard | Read-only "run today" view: daily score, action of the day, training/learning done, 7-day cashflow |
-| Log | Sub-60-second daily entry: score, energy, top action, note; also fitness and learning entries |
+| Dashboard | Read-only "run today" view: daily score, action of the day, training/learning done, 7-day cashflow, today's AI-scored activities |
+| Log | Sub-60-second daily entry: score, energy, top action, note; every entry gets an AI productivity score (0–10) judged against your goals, with diminishing returns for repeated activities |
+| Business | One-screen business hub: balance, 7-day in/out/net, 30-day trend, offers, pipeline, experiments, recent transactions |
 | Lab | Experiments board: idea → testing → decided, with AI Reality Check per experiment |
 | Offers | Offers with automatic margin, plus leads/clients/suppliers |
 | Money | Transactions, running balance, 30-day trend |
+| Coach | AI recommendations across business, fitness, learning and focus, based on your last 14 days and goals |
+| Screen Time | Upload Screen Time screenshots; AI reads them and computes reclaimable time |
 | Review | Sends the last 7 days to the AI and returns a hard verdict |
-| Workspace | Rename, toggle modules, pause/archive, set primary |
+| Workspace | Rename, edit goals & priorities (used by all AI features), toggle modules, pause/archive, set primary |
+
+The UI is switchable between English and Slovak (EN/SK toggle in the header).
 
 Technical map: pages live in `app/(app)/`, reusable pieces in `components/`,
 Supabase clients and config in `lib/`, database schema in

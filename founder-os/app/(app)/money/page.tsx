@@ -3,6 +3,7 @@ import { CashflowChart, type CashflowPoint } from "@/components/cashflow-chart"
 import { Badge } from "@/components/ui/badge"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { daysAgo, isoDate } from "@/lib/dates"
+import { getT } from "@/lib/i18n-server"
 import { formatMoney } from "@/lib/money"
 import { createClient } from "@/lib/supabase/server"
 import { getWorkspaces, resolveActiveWorkspace } from "@/lib/workspace"
@@ -42,6 +43,7 @@ function buildChartData(transactions: Transaction[]): CashflowPoint[] {
 
 export default async function MoneyPage() {
   const supabase = createClient()
+  const { d } = getT()
   const workspaces = await getWorkspaces()
   const active = resolveActiveWorkspace(workspaces)!
 
@@ -67,9 +69,9 @@ export default async function MoneyPage() {
     <div className="space-y-6">
       <div className="flex flex-wrap items-center justify-between gap-3">
         <div>
-          <h1 className="text-xl font-semibold text-ink">Money</h1>
+          <h1 className="text-2xl font-bold text-ink">{d.money.title}</h1>
           <p className="text-sm text-muted-foreground">
-            Balance:{" "}
+            {d.money.balance}{" "}
             <span
               className={
                 totalBalance >= 0
@@ -86,13 +88,11 @@ export default async function MoneyPage() {
 
       <Card>
         <CardHeader className="pb-2">
-          <CardTitle className="text-base">Balance, last 30 days</CardTitle>
+          <CardTitle className="text-base">{d.money.trend}</CardTitle>
         </CardHeader>
         <CardContent>
           {transactions.length === 0 ? (
-            <p className="text-sm text-muted-foreground">
-              No transactions yet — the trend appears after your first entry.
-            </p>
+            <p className="text-sm text-muted-foreground">{d.money.noTrend}</p>
           ) : (
             <CashflowChart data={chartData} />
           )}
@@ -101,11 +101,13 @@ export default async function MoneyPage() {
 
       <Card>
         <CardHeader className="pb-3">
-          <CardTitle className="text-base">Transactions</CardTitle>
+          <CardTitle className="text-base">{d.money.transactions}</CardTitle>
         </CardHeader>
         <CardContent>
           {recent.length === 0 ? (
-            <p className="text-sm text-muted-foreground">Nothing yet.</p>
+            <p className="text-sm text-muted-foreground">
+              {d.money.nothingYet}
+            </p>
           ) : (
             <ul className="divide-y divide-line">
               {recent.map(({ transaction, balance }) => (

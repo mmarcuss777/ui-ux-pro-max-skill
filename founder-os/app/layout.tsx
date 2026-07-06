@@ -1,12 +1,15 @@
 import type { Metadata } from "next"
 import { Inter } from "next/font/google"
+
+import { LocaleProvider } from "@/components/locale-provider"
+import { getLocale } from "@/lib/i18n-server"
 import "./globals.css"
 
-const inter = Inter({ subsets: ["latin"], variable: "--font-inter" })
+const inter = Inter({ subsets: ["latin", "latin-ext"], variable: "--font-inter" })
 
 export const metadata: Metadata = {
-  title: "Founder OS",
-  description: "Personal operating system for a solo founder.",
+  title: "Nexa",
+  description: "Momentum, measured. The personal operating system for a solo founder.",
 }
 
 export default function RootLayout({
@@ -14,9 +17,13 @@ export default function RootLayout({
 }: Readonly<{
   children: React.ReactNode
 }>) {
+  const locale = getLocale()
+
   return (
-    <html lang="en">
-      <body className={`${inter.variable} font-sans`}>{children}</body>
+    <html lang={locale}>
+      <body className={`${inter.variable} font-sans`}>
+        <LocaleProvider locale={locale}>{children}</LocaleProvider>
+      </body>
     </html>
   )
 }

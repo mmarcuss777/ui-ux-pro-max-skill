@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server"
 
-import { askAnalyst } from "@/lib/ai"
+import { askAnalyst, languageInstruction } from "@/lib/ai"
+import { parseLocale } from "@/lib/i18n"
 import { createClient } from "@/lib/supabase/server"
 
 const REALITY_CHECK_SYSTEM = `You are a hard, practical business risk analyst for a solo bootstrapped founder.
@@ -47,12 +48,14 @@ export async function POST(request: Request) {
     goal?: string
     constraint?: string
     summary?: string
+    locale?: string
   }
   try {
     body = await request.json()
   } catch {
     return NextResponse.json({ error: "Invalid JSON body" }, { status: 400 })
   }
+  const locale = parseLocale(body.locale)
 
   try {
     if (body.mode === "weekly-review") {
@@ -62,7 +65,10 @@ export async function POST(request: Request) {
           { status: 400 }
         )
       }
-      const result = await askAnalyst(WEEKLY_REVIEW_SYSTEM, body.summary)
+      const result = await askAnalyst(
+        WEEKLY_REVIEW_SYSTEM + languageInstruction(locale),
+        body.summary
+      )
       return NextResponse.json({ result })
     }
 
@@ -75,7 +81,10 @@ export async function POST(request: Request) {
       `Goal / metric: ${body.goal || "not defined"}`,
       `Constraint: ${body.constraint || "solo founder, minimal budget"}`,
     ].join("\n")
-    const result = await askAnalyst(REALITY_CHECK_SYSTEM, prompt)
+    const result = await askAnalyst(
+      REALITY_CHECK_SYSTEM + languageInstruction(locale),
+      prompt
+    )
     return NextResponse.json({ result })
   } catch (error) {
     console.error("AI request failed:", error)
