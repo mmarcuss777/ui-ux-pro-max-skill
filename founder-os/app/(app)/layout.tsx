@@ -30,9 +30,12 @@ export default async function AppLayout({
 
   return (
     <div className="min-h-dvh">
-      <header className="sticky top-0 z-40 border-b border-line/70 bg-paper/85 backdrop-blur-md">
-        <div className="mx-auto flex h-14 max-w-5xl items-center justify-between gap-2 px-4">
-          <Link href="/dashboard" className="text-lg font-bold tracking-tight">
+      <header className="glass sticky top-0 z-40 border-b">
+        <div className="mx-auto flex h-[3.75rem] max-w-5xl items-center justify-between gap-2 px-4">
+          <Link
+            href="/dashboard"
+            className="text-xl font-semibold tracking-tight"
+          >
             <span className="gold-text">Nexa</span>
             <span className="text-gold-light">.</span>
           </Link>
@@ -52,7 +55,7 @@ export default async function AppLayout({
         </div>
         <AppNav />
       </header>
-      <main className="mx-auto w-full max-w-5xl px-4 py-6 pb-24 md:pb-6">
+      <main className="mx-auto w-full max-w-5xl animate-fade-up px-4 py-6 pb-28 md:pb-8">
         {children}
       </main>
       <BottomNav />

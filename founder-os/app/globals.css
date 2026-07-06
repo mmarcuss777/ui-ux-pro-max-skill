@@ -8,24 +8,24 @@
        danger) live in tailwind.config.ts and are tuned for this surface. */
     --background: 222 65% 7%;
     --foreground: 45 25% 93%;
-    --card: 220 48% 9%;
+    --card: 220 45% 11%;
     --card-foreground: 45 25% 93%;
-    --popover: 220 48% 8%;
+    --popover: 221 50% 9%;
     --popover-foreground: 45 25% 93%;
     --primary: 43 62% 52%;
     --primary-foreground: 222 65% 7%;
-    --secondary: 220 38% 14%;
+    --secondary: 220 38% 15%;
     --secondary-foreground: 45 25% 90%;
     --muted: 220 38% 13%;
-    --muted-foreground: 220 16% 66%;
-    --accent: 220 38% 16%;
+    --muted-foreground: 221 15% 68%;
+    --accent: 220 38% 17%;
     --accent-foreground: 45 25% 93%;
     --destructive: 0 72% 62%;
     --destructive-foreground: 0 0% 100%;
-    --border: 220 34% 17%;
-    --input: 220 34% 21%;
+    --border: 220 32% 18%;
+    --input: 220 30% 22%;
     --ring: 43 62% 52%;
-    --radius: 0.75rem;
+    --radius: 1rem;
   }
 }
 
@@ -33,28 +33,40 @@
   * {
     @apply border-border;
   }
+  html {
+    -webkit-tap-highlight-color: transparent;
+    scroll-behavior: smooth;
+  }
   body {
     @apply text-foreground antialiased;
     background-color: #060c1c;
-    /* Blueprint grid + gold and royal-blue glows */
+    /* Quiet aurora: one warm gold light from the top right, one cool royal
+       blue from the left, a faint ember at the bottom. No grids, no noise. */
     background-image:
-      linear-gradient(rgba(212, 175, 55, 0.03) 1px, transparent 1px),
-      linear-gradient(90deg, rgba(212, 175, 55, 0.03) 1px, transparent 1px),
-      radial-gradient(52rem 36rem at 112% -8%, rgba(212, 175, 55, 0.14), transparent 60%),
-      radial-gradient(46rem 32rem at -14% 2%, rgba(37, 99, 235, 0.18), transparent 60%),
-      radial-gradient(52rem 42rem at 55% 132%, rgba(176, 108, 12, 0.1), transparent 65%);
-    background-size:
-      44px 44px,
-      44px 44px,
-      auto,
-      auto,
-      auto;
+      radial-gradient(60rem 42rem at 110% -12%, rgba(212, 175, 55, 0.12), transparent 62%),
+      radial-gradient(52rem 38rem at -18% -4%, rgba(43, 92, 226, 0.16), transparent 60%),
+      radial-gradient(64rem 48rem at 50% 130%, rgba(154, 123, 36, 0.08), transparent 65%);
     background-attachment: fixed;
+    font-feature-settings: "cv02", "cv03", "cv04", "cv11";
+    text-rendering: optimizeLegibility;
   }
   h1,
   h2,
   h3 {
     @apply tracking-tight;
+  }
+  h1 {
+    letter-spacing: -0.03em;
+  }
+  ::selection {
+    background: rgba(212, 175, 55, 0.28);
+    color: #f3efe2;
+  }
+  input,
+  textarea,
+  select,
+  button {
+    font-size: inherit;
   }
 }
 
@@ -65,6 +77,19 @@
   }
   /* Signature gold gradient — fills (buttons, pills, chips) */
   .gold-fill {
-    @apply border-0 bg-gradient-to-r from-gold-light via-gold to-gold-dark text-paper;
+    @apply border-0 bg-gradient-to-b from-gold-light via-gold to-gold-dark text-paper;
+  }
+  /* Frosted panel — header, bottom nav, floating chrome */
+  .glass {
+    @apply border-white/[0.06] bg-paper/70 backdrop-blur-2xl backdrop-saturate-150;
+  }
+  /* Card material: hairline border + inner top highlight, like brushed glass */
+  .surface {
+    @apply rounded-2xl border border-white/[0.06] bg-card/80 shadow-card backdrop-blur-xl;
+    background-image: linear-gradient(
+      to bottom,
+      rgba(255, 255, 255, 0.045),
+      rgba(255, 255, 255, 0) 34%
+    );
   }
 }

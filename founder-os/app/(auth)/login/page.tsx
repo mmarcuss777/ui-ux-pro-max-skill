@@ -55,10 +55,10 @@ export default function LoginPage() {
       <Card className="w-full max-w-sm shadow-sm">
         <CardHeader>
           <CardTitle className="text-3xl font-bold tracking-tight">
-            <span className="bg-gradient-to-r from-cyan-300 via-violet-400 to-fuchsia-400 bg-clip-text text-transparent">
+            <span className="gold-text">
               Nexa
             </span>
-            <span className="text-fuchsia-400">.</span>
+            <span className="text-gold-light">.</span>
           </CardTitle>
           <CardDescription>
             {d.app.slogan} {d.auth.loginSubtitle}

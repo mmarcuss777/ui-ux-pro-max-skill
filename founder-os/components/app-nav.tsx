@@ -50,8 +50,8 @@ export function AppNav() {
             className={cn(
               "flex h-9 shrink-0 items-center rounded-full px-4 text-sm font-medium transition-colors",
               isActive
-                ? "gold-fill font-semibold shadow-md shadow-gold/20"
-                : "text-muted-foreground hover:bg-secondary hover:text-ink"
+                ? "gold-fill font-semibold shadow-gold-glow"
+                : "text-muted-foreground hover:bg-white/[0.06] hover:text-ink"
             )}
           >
             {d.nav[link.key]}
@@ -62,7 +62,7 @@ export function AppNav() {
   )
 }
 
-// Fixed bottom navigation — mobile only. Mind, Nexa and Workspace live in
+// Floating glass dock — mobile only. Mind, Nexa and Workspace live in
 // the header menu on small screens.
 export function BottomNav() {
   const pathname = usePathname()
@@ -71,9 +71,9 @@ export function BottomNav() {
   return (
     <nav
       aria-label="Main"
-      className="fixed inset-x-0 bottom-0 z-40 border-t border-line/80 bg-paper/95 pb-[env(safe-area-inset-bottom)] backdrop-blur-md md:hidden"
+      className="fixed inset-x-0 bottom-0 z-40 px-4 pb-[calc(env(safe-area-inset-bottom)+0.625rem)] md:hidden"
     >
-      <div className="mx-auto grid max-w-md grid-cols-5">
+      <div className="glass mx-auto grid max-w-md grid-cols-5 rounded-[1.75rem] border shadow-elevated">
         {MOBILE_LINKS.map((link) => {
           const isActive = pathname.startsWith(link.href)
           const Icon = link.icon
@@ -83,11 +83,24 @@ export function BottomNav() {
               href={link.href}
               aria-current={isActive ? "page" : undefined}
               className={cn(
-                "flex min-h-[3.5rem] flex-col items-center justify-center gap-1 text-[11px] font-medium transition-colors",
+                "flex min-h-[3.75rem] flex-col items-center justify-center gap-1 text-[10px] font-medium transition-all duration-200 ease-spring active:scale-95",
                 isActive ? "text-gold-light" : "text-muted-foreground"
               )}
             >
-              <Icon className={cn("h-5 w-5", isActive && "drop-shadow-[0_0_6px_rgba(212,175,55,0.6)]")} />
+              <span
+                className={cn(
+                  "flex h-7 w-12 items-center justify-center rounded-full transition-all duration-200 ease-spring",
+                  isActive && "bg-gold/15"
+                )}
+              >
+                <Icon
+                  className={cn(
+                    "h-5 w-5",
+                    isActive &&
+                      "drop-shadow-[0_0_8px_rgba(212,175,55,0.55)]"
+                  )}
+                />
+              </span>
               {d.nav[link.key]}
             </Link>
           )
