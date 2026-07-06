@@ -37,7 +37,7 @@ export function RealityCheckPanel({ context }: { context: string }) {
     <Card className="border-gold/25">
       <CardHeader className="flex-row items-center justify-between space-y-0 pb-3">
         <div>
-          <CardTitle className="text-base text-gold-light">
+          <CardTitle className="text-base text-gold-dark">
             {d.buildPage.realityCheck}
           </CardTitle>
           <p className="mt-1 text-xs text-muted-foreground">
@@ -46,7 +46,7 @@ export function RealityCheckPanel({ context }: { context: string }) {
         </div>
         <Button
           variant="outline"
-          className="h-9 border-gold/40 text-gold-light hover:text-gold-light"
+          className="h-9 border-gold/40 text-gold-dark hover:text-gold-dark"
           onClick={run}
           disabled={loading}
         >

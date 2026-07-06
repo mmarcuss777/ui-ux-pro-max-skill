@@ -231,7 +231,7 @@ export function BuildFormDialog({
           </div>
 
           <div className="space-y-3 rounded-xl border border-gold/25 bg-gold/5 p-4">
-            <p className="text-xs font-semibold uppercase tracking-wider text-gold-light">
+            <p className="text-xs font-semibold uppercase tracking-wider text-gold-dark">
               {d.buildPage.playbook} — {d.labels[type as LabelKey] ?? type}
             </p>
             {typeFields.map((key) => (

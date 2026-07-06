@@ -9,17 +9,17 @@ const config: Config = {
   theme: {
     extend: {
       colors: {
-        // Nexa navy+gold tokens. "ink" is the high-emphasis warm-ivory text,
-        // "paper" the deep navy base; secondary text uses --muted-foreground.
-        ink: "#F3EFE2",
-        paper: "#060C1C",
-        line: "#1C2740",
-        danger: "#F87171",
-        ok: "#2DD4A0",
+        // Nexa white+gold tokens. "ink" is the warm near-black text, "paper"
+        // the warm-white base; secondary text uses --muted-foreground.
+        ink: "#1C1710",
+        paper: "#FCFBF7",
+        line: "#EAE6DB",
+        danger: "#B42318",
+        ok: "#177A53",
         gold: {
-          light: "#F6E27A",
-          DEFAULT: "#D4AF37",
-          dark: "#9A7B24",
+          light: "#F0D77B",
+          DEFAULT: "#C9A227",
+          dark: "#8F6E14",
         },
         // shadcn semantic colors, mapped to the tokens above via CSS variables
         border: "hsl(var(--border))",
@@ -73,9 +73,9 @@ const config: Config = {
         ],
       },
       boxShadow: {
-        card: "0 1px 2px rgba(0,0,0,0.4), 0 12px 32px -12px rgba(0,0,0,0.55)",
-        elevated: "0 4px 12px rgba(0,0,0,0.45), 0 24px 48px -16px rgba(0,0,0,0.6)",
-        "gold-glow": "0 8px 24px -8px rgba(212,175,55,0.45)",
+        card: "0 1px 2px rgba(28,23,12,0.04), 0 12px 32px -14px rgba(28,23,12,0.1)",
+        elevated: "0 4px 12px rgba(28,23,12,0.06), 0 24px 56px -18px rgba(28,23,12,0.18)",
+        "gold-glow": "0 10px 26px -10px rgba(178,140,30,0.5)",
       },
       transitionTimingFunction: {
         spring: "cubic-bezier(0.22, 1, 0.36, 1)",

@@ -17,13 +17,13 @@ export const metadata: Metadata = {
   },
   appleWebApp: {
     capable: true,
-    statusBarStyle: "black-translucent",
+    statusBarStyle: "default",
     title: "Nexa",
   },
 }
 
 export const viewport: Viewport = {
-  themeColor: "#060C1C",
+  themeColor: "#FCFBF7",
   width: "device-width",
   initialScale: 1,
   viewportFit: "cover",

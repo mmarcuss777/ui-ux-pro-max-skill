@@ -59,7 +59,7 @@ export default async function LogPage() {
             <ul className="divide-y divide-line">
               {todayLogs.map((log) => (
                 <li key={log.id} className="flex items-center gap-3 py-3">
-                  <Badge variant="outline" className="border-gold/30 text-gold-light">
+                  <Badge variant="outline" className="border-gold/30 text-gold-dark">
                     {tabLabel(log.type)}
                   </Badge>
                   <span className="min-w-0 truncate text-sm text-muted-foreground">

@@ -173,7 +173,7 @@ export default async function MindPage() {
                           </span>
                           <span>
                             {d.screen.reclaimable}:{" "}
-                            <span className="font-semibold tabular-nums text-gold-light">
+                            <span className="font-semibold tabular-nums text-gold-dark">
                               {formatMinutes(data.wasted_minutes)}
                             </span>
                           </span>
@@ -187,7 +187,7 @@ export default async function MindPage() {
                         )}
                         {data.analysis && (
                           <details>
-                            <summary className="cursor-pointer text-xs font-medium text-gold-light">
+                            <summary className="cursor-pointer text-xs font-medium text-gold-dark">
                               {d.screen.analyze}
                             </summary>
                             <pre className="mt-2 whitespace-pre-wrap font-sans text-xs text-muted-foreground">

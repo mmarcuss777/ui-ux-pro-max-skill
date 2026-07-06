@@ -63,7 +63,7 @@ export default function SignupPage() {
             <span className="gold-text">
               Nexa
             </span>
-            <span className="text-gold-light">.</span>
+            <span className="text-gold-dark">.</span>
           </CardTitle>
           <CardDescription>
             {d.app.slogan} {d.auth.signupSubtitle}

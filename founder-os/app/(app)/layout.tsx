@@ -37,7 +37,7 @@ export default async function AppLayout({
             className="text-xl font-semibold tracking-tight"
           >
             <span className="gold-text">Nexa</span>
-            <span className="text-gold-light">.</span>
+            <span className="text-gold-dark">.</span>
           </Link>
           <div className="flex items-center gap-1.5">
             <LanguageToggle />

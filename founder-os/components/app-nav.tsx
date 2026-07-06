@@ -51,7 +51,7 @@ export function AppNav() {
               "flex h-9 shrink-0 items-center rounded-full px-4 text-sm font-medium transition-colors",
               isActive
                 ? "gold-fill font-semibold shadow-gold-glow"
-                : "text-muted-foreground hover:bg-white/[0.06] hover:text-ink"
+                : "text-muted-foreground hover:bg-black/[0.05] hover:text-ink"
             )}
           >
             {d.nav[link.key]}
@@ -84,20 +84,20 @@ export function BottomNav() {
               aria-current={isActive ? "page" : undefined}
               className={cn(
                 "flex min-h-[3.75rem] flex-col items-center justify-center gap-1 text-[10px] font-medium transition-all duration-200 ease-spring active:scale-95",
-                isActive ? "text-gold-light" : "text-muted-foreground"
+                isActive ? "text-gold-dark" : "text-muted-foreground"
               )}
             >
               <span
                 className={cn(
                   "flex h-7 w-12 items-center justify-center rounded-full transition-all duration-200 ease-spring",
-                  isActive && "bg-gold/15"
+                  isActive && "bg-gold/[0.16]"
                 )}
               >
                 <Icon
                   className={cn(
                     "h-5 w-5",
                     isActive &&
-                      "drop-shadow-[0_0_8px_rgba(212,175,55,0.55)]"
+                      "drop-shadow-[0_1px_6px_rgba(201,162,39,0.5)]"
                   )}
                 />
               </span>

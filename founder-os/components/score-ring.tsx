@@ -1,4 +1,9 @@
-// Circular progress with a gold gradient stroke — the Daily Score centerpiece.
+"use client"
+
+import { useEffect, useState } from "react"
+
+// Circular progress with a gold gradient stroke — the Daily Score
+// centerpiece. Fills from zero with a spring sweep on mount.
 export function ScoreRing({
   value,
   size = 168,
@@ -12,7 +17,14 @@ export function ScoreRing({
   const radius = (size - stroke) / 2
   const circumference = 2 * Math.PI * radius
   const clamped = Math.max(0, Math.min(100, value))
-  const offset = circumference * (1 - clamped / 100)
+  const [shown, setShown] = useState(0)
+
+  useEffect(() => {
+    const frame = requestAnimationFrame(() => setShown(clamped))
+    return () => cancelAnimationFrame(frame)
+  }, [clamped])
+
+  const offset = circumference * (1 - shown / 100)
 
   return (
     <div
@@ -24,9 +36,9 @@ export function ScoreRing({
       <svg width={size} height={size} className="-rotate-90">
         <defs>
           <linearGradient id="ringGold" x1="0%" y1="0%" x2="100%" y2="100%">
-            <stop offset="0%" stopColor="#F6E27A" />
-            <stop offset="55%" stopColor="#D4AF37" />
-            <stop offset="100%" stopColor="#9A7B24" />
+            <stop offset="0%" stopColor="#F0D77B" />
+            <stop offset="55%" stopColor="#C9A227" />
+            <stop offset="100%" stopColor="#8F6E14" />
           </linearGradient>
         </defs>
         <circle
@@ -34,7 +46,7 @@ export function ScoreRing({
           cy={size / 2}
           r={radius}
           fill="none"
-          stroke="#1C2740"
+          stroke="#ECE7DA"
           strokeWidth={stroke}
         />
         <circle
@@ -47,7 +59,10 @@ export function ScoreRing({
           strokeLinecap="round"
           strokeDasharray={circumference}
           strokeDashoffset={offset}
-          style={{ filter: "drop-shadow(0 0 8px rgba(212,175,55,0.45))" }}
+          style={{
+            filter: "drop-shadow(0 2px 6px rgba(201,162,39,0.35))",
+            transition: "stroke-dashoffset 1.1s cubic-bezier(0.22, 1, 0.36, 1)",
+          }}
         />
       </svg>
       <div className="absolute inset-0 flex flex-col items-center justify-center">

@@ -166,7 +166,7 @@ export default async function BuildPage() {
         <>
           <Card>
             <CardHeader className="pb-3">
-              <CardTitle className="text-base text-gold-light">
+              <CardTitle className="text-base text-gold-dark">
                 {d.buildPage.playbook}
               </CardTitle>
               <p className="text-xs text-muted-foreground">

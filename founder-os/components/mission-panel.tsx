@@ -32,9 +32,9 @@ const PILLARS: {
   icon: typeof LightningBoltIcon
   tint: string
 }[] = [
-  { key: "body", icon: LightningBoltIcon, tint: "bg-amber-400/15 text-amber-300" },
-  { key: "mind", icon: ReaderIcon, tint: "bg-blue-400/15 text-blue-300" },
-  { key: "build", icon: RocketIcon, tint: "bg-gold/15 text-gold-light" },
+  { key: "body", icon: LightningBoltIcon, tint: "bg-amber-500/15 text-amber-700" },
+  { key: "mind", icon: ReaderIcon, tint: "bg-blue-500/12 text-blue-700" },
+  { key: "build", icon: RocketIcon, tint: "bg-gold/15 text-gold-dark" },
   { key: "money", icon: BarChartIcon, tint: "bg-ok/15 text-ok" },
 ]
 
