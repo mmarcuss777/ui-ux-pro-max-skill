@@ -1,8 +1,9 @@
-import { DailyLogForm } from "@/components/daily-log-form"
+import { LogForm } from "@/components/log-form"
 import { Badge } from "@/components/ui/badge"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { today } from "@/lib/dates"
 import { getT } from "@/lib/i18n-server"
+import { BODY_TYPES, MIND_TYPES } from "@/lib/stats"
 import { createClient } from "@/lib/supabase/server"
 import { getWorkspaces, resolveActiveWorkspace } from "@/lib/workspace"
 import type { Log } from "@/types/db"
@@ -10,13 +11,12 @@ import type { Log } from "@/types/db"
 type LogData = {
   note?: string
   top_action?: string
-  ai_score?: number
-  ai_reason?: string
+  lesson?: string
 }
 
 function logSummary(log: Log): string {
   const data = (log.data ?? {}) as LogData
-  return data.note || data.top_action || "—"
+  return data.lesson || data.note || data.top_action || "—"
 }
 
 export default async function LogPage() {
@@ -29,8 +29,15 @@ export default async function LogPage() {
     .from("logs")
     .select("*")
     .eq("date", today())
-    .in("type", ["daily", "fitness", "learning"])
+    .in("type", ["daily", "body", "mind", "build", "fitness", "learning"])
     .order("created_at", { ascending: false })
+
+  function tabLabel(type: string): string {
+    if (type === "daily") return d.log.dailyTab
+    if (BODY_TYPES.includes(type)) return d.log.bodyTab
+    if (MIND_TYPES.includes(type)) return d.log.mindTab
+    return d.log.buildTab
+  }
 
   return (
     <div className="mx-auto max-w-lg space-y-6">
@@ -39,7 +46,7 @@ export default async function LogPage() {
         <p className="text-sm text-muted-foreground">{d.log.subtitle}</p>
       </div>
 
-      <DailyLogForm workspaceId={active.id} />
+      <LogForm workspaceId={active.id} />
 
       <Card>
         <CardHeader className="pb-3">
@@ -50,40 +57,16 @@ export default async function LogPage() {
             <p className="text-sm text-muted-foreground">{d.log.nothingYet}</p>
           ) : (
             <ul className="divide-y divide-line">
-              {todayLogs.map((log) => {
-                const data = (log.data ?? {}) as LogData
-                return (
-                  <li key={log.id} className="space-y-1 py-3">
-                    <div className="flex items-center gap-3">
-                      <Badge variant="outline">
-                        {
-                          d.labels[
-                            log.type as "daily" | "fitness" | "learning"
-                          ]
-                        }
-                      </Badge>
-                      {log.type === "daily" && log.score !== null && (
-                        <span className="text-sm font-medium tabular-nums text-ink">
-                          {log.score}
-                        </span>
-                      )}
-                      <span className="min-w-0 truncate text-sm text-muted-foreground">
-                        {logSummary(log)}
-                      </span>
-                      {typeof data.ai_score === "number" && (
-                        <Badge className="ml-auto shrink-0 border-transparent bg-gradient-to-r from-indigo-500 to-fuchsia-500 tabular-nums text-white">
-                          {d.dashboard.aiScore} {data.ai_score}/10
-                        </Badge>
-                      )}
-                    </div>
-                    {data.ai_reason && (
-                      <p className="text-xs text-muted-foreground">
-                        {data.ai_reason}
-                      </p>
-                    )}
-                  </li>
-                )
-              })}
+              {todayLogs.map((log) => (
+                <li key={log.id} className="flex items-center gap-3 py-3">
+                  <Badge variant="outline" className="border-gold/30 text-gold-light">
+                    {tabLabel(log.type)}
+                  </Badge>
+                  <span className="min-w-0 truncate text-sm text-muted-foreground">
+                    {logSummary(log)}
+                  </span>
+                </li>
+              ))}
             </ul>
           )}
         </CardContent>

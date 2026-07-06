@@ -17,7 +17,7 @@ export type CashflowPoint = {
   balance: number
 }
 
-// Single-series trend on the dark surface: cyan→violet gradient line,
+// Single-series trend on the navy surface: gold gradient line,
 // recessive grid, no legend (the card title names the series).
 export function CashflowChart({ data }: { data: CashflowPoint[] }) {
   return (
@@ -26,33 +26,33 @@ export function CashflowChart({ data }: { data: CashflowPoint[] }) {
         <LineChart data={data} margin={{ top: 8, right: 8, bottom: 0, left: 0 }}>
           <defs>
             <linearGradient id="nexaLine" x1="0" y1="0" x2="1" y2="0">
-              <stop offset="0%" stopColor="#22D3EE" />
-              <stop offset="100%" stopColor="#C084FC" />
+              <stop offset="0%" stopColor="#F6E27A" />
+              <stop offset="100%" stopColor="#9A7B24" />
             </linearGradient>
           </defs>
-          <CartesianGrid stroke="#242C4A" strokeDasharray="0" vertical={false} />
+          <CartesianGrid stroke="#1C2740" strokeDasharray="0" vertical={false} />
           <XAxis
             dataKey="date"
             tickFormatter={(value: string) => value.slice(5)}
-            tick={{ fontSize: 12, fill: "#8A94B8" }}
+            tick={{ fontSize: 12, fill: "#7E88A0" }}
             tickLine={false}
-            axisLine={{ stroke: "#242C4A" }}
+            axisLine={{ stroke: "#1C2740" }}
             minTickGap={32}
           />
           <YAxis
             tickFormatter={(value: number) => formatMoney(value)}
-            tick={{ fontSize: 12, fill: "#8A94B8" }}
+            tick={{ fontSize: 12, fill: "#7E88A0" }}
             tickLine={false}
             axisLine={false}
             width={70}
           />
           <Tooltip
             formatter={(value) => [formatMoney(Number(value)), "Balance"]}
-            labelStyle={{ color: "#8A94B8", fontSize: 12 }}
-            itemStyle={{ color: "#EEF1FA" }}
+            labelStyle={{ color: "#7E88A0", fontSize: 12 }}
+            itemStyle={{ color: "#F3EFE2" }}
             contentStyle={{
-              backgroundColor: "#101736",
-              borderColor: "#242C4A",
+              backgroundColor: "#0B1426",
+              borderColor: "#1C2740",
               borderRadius: 12,
               fontSize: 13,
             }}
@@ -63,7 +63,7 @@ export function CashflowChart({ data }: { data: CashflowPoint[] }) {
             stroke="url(#nexaLine)"
             strokeWidth={2.5}
             dot={false}
-            activeDot={{ r: 4, fill: "#C084FC", stroke: "#0A0F1E" }}
+            activeDot={{ r: 4, fill: "#D4AF37", stroke: "#060C1C" }}
             isAnimationActive={false}
           />
         </LineChart>

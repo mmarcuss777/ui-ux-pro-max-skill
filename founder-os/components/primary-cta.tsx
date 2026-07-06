@@ -8,7 +8,7 @@ export function PrimaryCta({ className, ...props }: ButtonProps) {
     <Button
       {...props}
       className={cn(
-        "h-11 border-0 bg-gradient-to-r from-indigo-500 via-violet-500 to-fuchsia-500 px-6 text-white shadow-lg shadow-violet-950/50 transition hover:opacity-90",
+        "gold-fill h-11 px-6 font-semibold shadow-lg shadow-gold/25 transition hover:opacity-90",
         className
       )}
     />

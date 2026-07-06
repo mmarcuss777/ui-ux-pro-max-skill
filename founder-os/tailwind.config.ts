@@ -9,13 +9,18 @@ const config: Config = {
   theme: {
     extend: {
       colors: {
-        // Nexa dark-theme tokens. "ink" is the high-emphasis text/chip color,
-        // "paper" the page base; secondary text uses --muted-foreground.
-        ink: "#EEF1FA",
-        paper: "#0A0F1E",
-        line: "#242C4A",
+        // Nexa navy+gold tokens. "ink" is the high-emphasis warm-ivory text,
+        // "paper" the deep navy base; secondary text uses --muted-foreground.
+        ink: "#F3EFE2",
+        paper: "#060C1C",
+        line: "#1C2740",
         danger: "#F87171",
-        ok: "#34D399",
+        ok: "#2DD4A0",
+        gold: {
+          light: "#F6E27A",
+          DEFAULT: "#D4AF37",
+          dark: "#9A7B24",
+        },
         // shadcn semantic colors, mapped to the tokens above via CSS variables
         border: "hsl(var(--border))",
         input: "hsl(var(--input))",

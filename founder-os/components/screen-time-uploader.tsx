@@ -69,7 +69,9 @@ export function ScreenTimeUploader() {
       body: JSON.stringify({ images, locale }),
     })
     const data = await response.json()
-    if (!response.ok) {
+    if (response.status === 429) {
+      setError(d.screen.limitReached)
+    } else if (!response.ok) {
       setError(data.error ?? d.screen.failed)
     } else {
       setResult(data.analysis)

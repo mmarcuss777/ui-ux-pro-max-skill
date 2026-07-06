@@ -186,6 +186,51 @@ export type Database = {
         }
         Relationships: []
       }
+      builds: {
+        Row: {
+          id: string
+          workspace_id: string
+          name: string
+          business_type: string
+          stage: string
+          week_goal: string | null
+          next_action: string | null
+          priority: string
+          status: string
+          fields: Json
+          notes: string | null
+          created_at: string
+        }
+        Insert: {
+          id?: string
+          workspace_id: string
+          name: string
+          business_type?: string
+          stage?: string
+          week_goal?: string | null
+          next_action?: string | null
+          priority?: string
+          status?: string
+          fields?: Json
+          notes?: string | null
+          created_at?: string
+        }
+        Update: {
+          id?: string
+          workspace_id?: string
+          name?: string
+          business_type?: string
+          stage?: string
+          week_goal?: string | null
+          next_action?: string | null
+          priority?: string
+          status?: string
+          fields?: Json
+          notes?: string | null
+          created_at?: string
+        }
+        Relationships: []
+      }
       transactions: {
         Row: {
           id: string
@@ -231,6 +276,7 @@ export type Database = {
 }
 
 // Convenience row aliases used across the app
+export type Build = Database["public"]["Tables"]["builds"]["Row"]
 export type Workspace = Database["public"]["Tables"]["workspaces"]["Row"]
 export type Log = Database["public"]["Tables"]["logs"]["Row"]
 export type Experiment = Database["public"]["Tables"]["experiments"]["Row"]

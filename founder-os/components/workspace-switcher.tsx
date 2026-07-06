@@ -1,7 +1,12 @@
 "use client"
 
 import { useRouter } from "next/navigation"
-import { CaretSortIcon, CheckIcon, PlusIcon } from "@radix-ui/react-icons"
+import {
+  CaretSortIcon,
+  CheckIcon,
+  GearIcon,
+  PlusIcon,
+} from "@radix-ui/react-icons"
 
 import { useT } from "@/components/locale-provider"
 import { Button } from "@/components/ui/button"
@@ -67,6 +72,10 @@ export function WorkspaceSwitcher({
           </DropdownMenuItem>
         ))}
         <DropdownMenuSeparator />
+        <DropdownMenuItem onSelect={() => router.push("/workspace")}>
+          <GearIcon className="mr-2 h-4 w-4" />
+          {d.switcher.manage}
+        </DropdownMenuItem>
         <DropdownMenuItem onSelect={() => router.push("/onboarding")}>
           <PlusIcon className="mr-2 h-4 w-4" />
           {d.switcher.newWorkspace}

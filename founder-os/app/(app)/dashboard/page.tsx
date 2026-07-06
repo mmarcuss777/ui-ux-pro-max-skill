@@ -1,95 +1,56 @@
 import Link from "next/link"
 
-import { StatCard } from "@/components/stat-card"
-import { Badge } from "@/components/ui/badge"
+import { CurrentBuildCard } from "@/components/current-build-card"
+import { MissionPanel } from "@/components/mission-panel"
+import { ScoreRing } from "@/components/score-ring"
 import { Button } from "@/components/ui/button"
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
-import { daysAgo, today } from "@/lib/dates"
+import { Card, CardContent } from "@/components/ui/card"
+import { today } from "@/lib/dates"
 import { getT } from "@/lib/i18n-server"
-import { formatMoney } from "@/lib/money"
+import {
+  dailyScore,
+  pillarComplete,
+  pillarEvidence,
+  type MissionData,
+} from "@/lib/stats"
 import { createClient } from "@/lib/supabase/server"
+import { getWorkspaces, resolveActiveWorkspace } from "@/lib/workspace"
 import type { Log, Transaction } from "@/types/db"
 
-type DailyData = {
-  energy?: number
-  note?: string
-  top_action?: string
-  top_action_done?: boolean
-  ai_score?: number
-  ai_reason?: string
-}
-
-function trendOf(delta: number): "up" | "down" | "flat" {
-  if (delta > 0) return "up"
-  if (delta < 0) return "down"
-  return "flat"
-}
-
-function netCashflow(transactions: Transaction[]): number {
-  return transactions.reduce(
-    (sum, t) => sum + (t.type === "in" ? t.amount : -t.amount),
-    0
-  )
-}
-
-export default async function DashboardPage() {
+export default async function TodayPage() {
   const supabase = createClient()
   const { locale, d } = getT()
+  const workspaces = await getWorkspaces()
+  const active = resolveActiveWorkspace(workspaces)!
   const todayDate = today()
-  const weekAgo = daysAgo(6)
-  const twoWeeksAgo = daysAgo(13)
 
-  const [{ data: logs }, { data: transactions }] = await Promise.all([
-    supabase
-      .from("logs")
-      .select("*")
-      .gte("date", twoWeeksAgo)
-      .in("type", ["daily", "fitness", "learning"]),
-    supabase.from("transactions").select("*").gte("date", twoWeeksAgo),
-  ])
+  const [{ data: logs }, { data: transactions }, { data: builds }] =
+    await Promise.all([
+      supabase.from("logs").select("*").eq("date", todayDate),
+      supabase.from("transactions").select("*").eq("date", todayDate),
+      supabase
+        .from("builds")
+        .select("*")
+        .eq("workspace_id", active.id)
+        .eq("status", "active")
+        .order("created_at", { ascending: false })
+        .limit(1),
+    ])
 
-  const allLogs: Log[] = logs ?? []
-  const allTransactions: Transaction[] = transactions ?? []
+  const todayLogs: Log[] = logs ?? []
+  const todayTx: Transaction[] = transactions ?? []
+  const build = builds?.[0] ?? null
 
-  // Daily score: today's entry vs the average of the 7 days before today
-  const todayDaily = allLogs.find(
-    (l) => l.type === "daily" && l.date === todayDate
-  )
-  const previousScores = allLogs
-    .filter((l) => l.type === "daily" && l.date < todayDate && l.score !== null)
-    .map((l) => l.score as number)
-  const previousAvg =
-    previousScores.length > 0
-      ? Math.round(
-          previousScores.reduce((a, b) => a + b, 0) / previousScores.length
-        )
-      : null
-
-  const score = todayDaily?.score ?? null
-  const scoreDelta =
-    score !== null && previousAvg !== null ? score - previousAvg : null
-
-  // Cashflow: last 7 days vs the 7 days before that
-  const thisWeek = allTransactions.filter((t) => t.date >= weekAgo)
-  const lastWeek = allTransactions.filter((t) => t.date < weekAgo)
-  const net = netCashflow(thisWeek)
-  const netDelta = net - netCashflow(lastWeek)
-
-  const dailyData = (todayDaily?.data ?? {}) as DailyData
-  const trainingDone = allLogs.some(
-    (l) => l.type === "fitness" && l.date === todayDate
-  )
-  const learningDone = allLogs.some(
-    (l) => l.type === "learning" && l.date === todayDate
-  )
-  const todayActivities = allLogs
-    .filter((l) => l.date === todayDate)
-    .sort((a, b) => (a.created_at < b.created_at ? 1 : -1))
+  const missionRow = todayLogs.find((l) => l.type === "mission") ?? null
+  const mission = missionRow ? ((missionRow.data ?? {}) as MissionData) : null
+  const evidence = pillarEvidence(todayLogs, todayTx)
+  const complete = pillarComplete(mission, evidence)
+  const score = dailyScore(complete)
 
   return (
     <div className="space-y-6">
       <div>
-        <h1 className="text-2xl font-bold text-ink">{d.dashboard.title}</h1>
+        <h1 className="text-2xl font-bold text-ink">{d.today.title}</h1>
         <p className="text-sm text-muted-foreground">
           {new Date().toLocaleDateString(locale === "sk" ? "sk-SK" : "en-GB", {
             weekday: "long",
@@ -99,136 +60,40 @@ export default async function DashboardPage() {
         </p>
       </div>
 
-      <div className="grid gap-4 sm:grid-cols-2">
-        <StatCard
-          label={d.dashboard.dailyScore}
-          value={score !== null ? String(score) : "—"}
-          trend={scoreDelta !== null ? trendOf(scoreDelta) : "flat"}
-          trendLabel={
-            scoreDelta !== null
-              ? `${scoreDelta > 0 ? "+" : ""}${scoreDelta} ${d.dashboard.vsAvg}`
-              : d.dashboard.noHistory
-          }
-          tone={
-            scoreDelta === null || scoreDelta === 0
-              ? "neutral"
-              : scoreDelta > 0
-                ? "ok"
-                : "danger"
-          }
-        />
-        <StatCard
-          label={d.dashboard.cashflow}
-          value={formatMoney(net)}
-          trend={trendOf(netDelta)}
-          trendLabel={`${netDelta > 0 ? "+" : ""}${formatMoney(netDelta)} ${d.dashboard.vsLastWeek}`}
-          tone={netDelta === 0 ? "neutral" : netDelta > 0 ? "ok" : "danger"}
-        />
+      <div className="grid gap-4 lg:grid-cols-[minmax(0,2fr)_minmax(0,3fr)]">
+        <Card className="flex flex-col items-center justify-center py-6">
+          <CardContent className="flex flex-col items-center gap-3 p-0">
+            <p className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
+              {d.today.dailyScore}
+            </p>
+            <ScoreRing value={score} label={d.today.dailyScore} />
+            <p className="max-w-[220px] text-center text-xs text-muted-foreground">
+              {d.today.scoreHint}
+            </p>
+          </CardContent>
+        </Card>
+
+        <CurrentBuildCard build={build} showOpen />
       </div>
 
-      <Card>
-        <CardHeader className="pb-3">
-          <CardTitle className="text-base">{d.dashboard.action}</CardTitle>
-        </CardHeader>
-        <CardContent>
-          {todayDaily ? (
-            dailyData.top_action ? (
-              <div className="flex flex-wrap items-center gap-3">
-                <p className="text-sm font-medium text-ink">
-                  {dailyData.top_action}
-                </p>
-                {dailyData.top_action_done ? (
-                  <Badge className="border-transparent bg-ok/15 text-ok hover:bg-ok/15">
-                    {d.dashboard.done}
-                  </Badge>
-                ) : (
-                  <Badge variant="outline">{d.dashboard.notDone}</Badge>
-                )}
-              </div>
-            ) : (
-              <p className="text-sm text-muted-foreground">
-                {d.dashboard.noTopAction}
-              </p>
-            )
-          ) : (
-            <div className="flex flex-wrap items-center gap-3">
-              <p className="text-sm text-muted-foreground">
-                {d.dashboard.noDailyLog}
-              </p>
-              <Button asChild variant="outline" size="sm">
-                <Link href="/log">{d.dashboard.goToLog}</Link>
-              </Button>
-            </div>
-          )}
-        </CardContent>
-      </Card>
+      <MissionPanel
+        missionId={missionRow?.id ?? null}
+        mission={mission}
+        complete={complete}
+        workspaceId={active.id}
+      />
 
-      <div className="grid gap-4 sm:grid-cols-2">
-        <Card>
-          <CardContent className="flex items-center justify-between p-4">
-            <p className="text-sm text-muted-foreground">
-              {d.dashboard.training}
-            </p>
-            <p
-              className={
-                trainingDone
-                  ? "text-sm font-medium text-ok"
-                  : "text-sm text-muted-foreground"
-              }
-            >
-              {trainingDone ? d.dashboard.done : d.dashboard.notYet}
-            </p>
-          </CardContent>
-        </Card>
-        <Card>
-          <CardContent className="flex items-center justify-between p-4">
-            <p className="text-sm text-muted-foreground">
-              {d.dashboard.learning}
-            </p>
-            <p
-              className={
-                learningDone
-                  ? "text-sm font-medium text-ok"
-                  : "text-sm text-muted-foreground"
-              }
-            >
-              {learningDone ? d.dashboard.done : d.dashboard.notYet}
-            </p>
-          </CardContent>
-        </Card>
+      <div className="flex flex-wrap gap-2">
+        <Button asChild variant="outline">
+          <Link href="/log">{d.today.addLog}</Link>
+        </Button>
+        <Button asChild variant="outline">
+          <Link href="/nexa">{d.today.askNexa}</Link>
+        </Button>
+        <Button asChild variant="outline">
+          <Link href="/review">{d.today.weeklyReview}</Link>
+        </Button>
       </div>
-
-      {todayActivities.length > 0 && (
-        <Card>
-          <CardHeader className="pb-3">
-            <CardTitle className="text-base">
-              {d.dashboard.activities}
-            </CardTitle>
-          </CardHeader>
-          <CardContent>
-            <ul className="divide-y divide-line">
-              {todayActivities.map((log) => {
-                const data = (log.data ?? {}) as DailyData
-                return (
-                  <li key={log.id} className="flex items-center gap-3 py-2.5">
-                    <Badge variant="outline">
-                      {d.labels[log.type as "daily" | "fitness" | "learning"]}
-                    </Badge>
-                    <span className="min-w-0 truncate text-sm text-muted-foreground">
-                      {data.top_action || data.note || "—"}
-                    </span>
-                    {typeof data.ai_score === "number" && (
-                      <Badge className="ml-auto shrink-0 border-transparent bg-gradient-to-r from-indigo-500 to-fuchsia-500 tabular-nums text-white">
-                        {d.dashboard.aiScore} {data.ai_score}/10
-                      </Badge>
-                    )}
-                  </li>
-                )
-              })}
-            </ul>
-          </CardContent>
-        </Card>
-      )}
     </div>
   )
 }

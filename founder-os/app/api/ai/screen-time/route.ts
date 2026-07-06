@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server"
 
 import { askVision, type VisionImage } from "@/lib/ai"
+import { checkAiLimit, recordAiCall } from "@/lib/ai-usage"
 import { parseLocale } from "@/lib/i18n"
 import { createClient } from "@/lib/supabase/server"
 import { getWorkspaces, resolveActiveWorkspace } from "@/lib/workspace"
@@ -78,6 +79,10 @@ export async function POST(request: Request) {
     })
   }
 
+  if (!(await checkAiLimit(supabase, "screen_time"))) {
+    return NextResponse.json({ error: "limit" }, { status: 429 })
+  }
+
   const workspaces = await getWorkspaces()
   const active = resolveActiveWorkspace(workspaces)
   const goals = active?.goals?.trim()
@@ -129,6 +134,7 @@ export async function POST(request: Request) {
       type: "screen_time",
       data,
     })
+    await recordAiCall(supabase, user.id, "screen_time")
 
     return NextResponse.json(data)
   } catch (error) {
