@@ -33,7 +33,7 @@ export function LanguageToggle() {
           className={cn(
             "h-7 rounded-full px-2.5 text-xs font-semibold uppercase tracking-wide transition-colors",
             locale === option
-              ? "bg-ink text-paper"
+              ? "bg-gradient-to-r from-indigo-500 to-fuchsia-500 text-white"
               : "text-muted-foreground hover:text-ink"
           )}
         >

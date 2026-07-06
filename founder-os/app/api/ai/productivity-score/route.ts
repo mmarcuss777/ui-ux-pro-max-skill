@@ -11,6 +11,8 @@ stated goals and priorities.
 
 Rules:
 - Score is an integer from 0 to 10.
+- For a "daily" entry, judge the whole day it describes (top action, whether it
+  was done, energy, note) — the founder does not self-score; you are the score.
 - Alignment with the founder's goals and priorities matters most.
 - Apply diminishing returns: a repeated similar activity on the same day scores
   notably lower than its first occurrence (a second gym session brings less than
@@ -116,7 +118,15 @@ export async function POST(request: Request) {
       ai_score: score,
       ai_reason: reason,
     }
-    await supabase.from("logs").update({ data: mergedData }).eq("id", log.id)
+    // Daily entries also get the AI-derived 0-100 day score (the founder
+    // no longer self-scores; the dashboard reads this column).
+    const updatePayload: { data: typeof mergedData; score?: number } = {
+      data: mergedData,
+    }
+    if (log.type === "daily") {
+      updatePayload.score = score * 10
+    }
+    await supabase.from("logs").update(updatePayload).eq("id", log.id)
 
     return NextResponse.json({ score, reason })
   } catch (error) {

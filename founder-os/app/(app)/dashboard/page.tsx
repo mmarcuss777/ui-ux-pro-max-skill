@@ -138,7 +138,7 @@ export default async function DashboardPage() {
                   {dailyData.top_action}
                 </p>
                 {dailyData.top_action_done ? (
-                  <Badge className="bg-ok hover:bg-ok">
+                  <Badge className="border-transparent bg-ok/15 text-ok hover:bg-ok/15">
                     {d.dashboard.done}
                   </Badge>
                 ) : (
@@ -218,7 +218,7 @@ export default async function DashboardPage() {
                       {data.top_action || data.note || "—"}
                     </span>
                     {typeof data.ai_score === "number" && (
-                      <Badge className="ml-auto shrink-0 bg-ink tabular-nums hover:bg-ink">
+                      <Badge className="ml-auto shrink-0 border-transparent bg-gradient-to-r from-indigo-500 to-fuchsia-500 tabular-nums text-white">
                         {d.dashboard.aiScore} {data.ai_score}/10
                       </Badge>
                     )}

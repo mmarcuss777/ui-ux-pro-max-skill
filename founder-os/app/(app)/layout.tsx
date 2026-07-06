@@ -31,11 +31,11 @@ export default async function AppLayout({
     <div className="min-h-dvh">
       <header className="sticky top-0 z-40 border-b border-line/70 bg-paper/90 backdrop-blur-md">
         <div className="mx-auto flex h-14 max-w-5xl items-center justify-between gap-2 px-4">
-          <Link
-            href="/dashboard"
-            className="text-lg font-bold tracking-tight text-ink"
-          >
-            Nexa<span className="text-ok">.</span>
+          <Link href="/dashboard" className="text-lg font-bold tracking-tight">
+            <span className="bg-gradient-to-r from-cyan-300 via-violet-400 to-fuchsia-400 bg-clip-text text-transparent">
+              Nexa
+            </span>
+            <span className="text-fuchsia-400">.</span>
           </Link>
           <div className="flex items-center gap-1.5">
             <LanguageToggle />

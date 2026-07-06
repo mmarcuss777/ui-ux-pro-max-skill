@@ -1,17 +1,12 @@
-import {
-  ArrowDownIcon,
-  ArrowUpIcon,
-  DashIcon,
-} from "@radix-ui/react-icons"
+import { ArrowDownIcon, ArrowUpIcon, DashIcon } from "@radix-ui/react-icons"
 
 import { Card, CardContent } from "@/components/ui/card"
 import { cn } from "@/lib/utils"
 
 type Trend = "up" | "down" | "flat"
 
-// Number + trend arrow + comparison to last week.
-// tone colors the trend (an improving number can be a falling one, e.g. costs),
-// so the caller decides what counts as good.
+// Number + trend arrow + comparison chip. tone colors the chip (an improving
+// number can be a falling one, e.g. costs), so the caller decides what's good.
 export function StatCard({
   label,
   value,
@@ -29,23 +24,29 @@ export function StatCard({
     trend === "up" ? ArrowUpIcon : trend === "down" ? ArrowDownIcon : DashIcon
 
   return (
-    <Card>
-      <CardContent className="p-4">
-        <p className="text-sm text-muted-foreground">{label}</p>
-        <p className="mt-1 text-3xl font-semibold tabular-nums text-ink">
+    <Card className="relative overflow-hidden">
+      <div
+        aria-hidden
+        className="pointer-events-none absolute inset-x-0 top-0 h-0.5 bg-gradient-to-r from-cyan-400 via-violet-500 to-fuchsia-500"
+      />
+      <CardContent className="p-5">
+        <p className="text-xs font-medium uppercase tracking-wider text-muted-foreground">
+          {label}
+        </p>
+        <p className="mt-2 text-4xl font-bold tabular-nums text-ink">
           {value}
         </p>
-        <p
+        <span
           className={cn(
-            "mt-1 flex items-center gap-1 text-sm",
-            tone === "ok" && "text-ok",
-            tone === "danger" && "text-danger",
-            tone === "neutral" && "text-muted-foreground"
+            "mt-3 inline-flex items-center gap-1 rounded-full px-2.5 py-1 text-xs font-medium",
+            tone === "ok" && "bg-ok/15 text-ok",
+            tone === "danger" && "bg-danger/15 text-danger",
+            tone === "neutral" && "bg-secondary text-muted-foreground"
           )}
         >
-          <TrendIcon className="h-4 w-4 shrink-0" aria-hidden />
-          <span>{trendLabel}</span>
-        </p>
+          <TrendIcon className="h-3.5 w-3.5 shrink-0" aria-hidden />
+          {trendLabel}
+        </span>
       </CardContent>
     </Card>
   )

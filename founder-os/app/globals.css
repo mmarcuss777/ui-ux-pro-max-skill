@@ -4,28 +4,27 @@
 
 @layer base {
   :root {
-    /* Values mirror the design tokens in tailwind.config.ts:
-       paper #FAFAFA, ink #1B2A4A, line #E3E6EC, muted #5A6472,
-       danger #9B2C2C, ok #24603B */
-    --background: 0 0% 98%;
-    --foreground: 222 47% 11%;
-    --card: 0 0% 100%;
-    --card-foreground: 222 47% 11%;
-    --popover: 0 0% 100%;
-    --popover-foreground: 222 47% 11%;
-    --primary: 221 47% 20%;
-    --primary-foreground: 0 0% 98%;
-    --secondary: 220 14% 93%;
-    --secondary-foreground: 221 47% 20%;
-    --muted: 220 14% 94%;
-    --muted-foreground: 215 12% 40%;
-    --accent: 220 14% 93%;
-    --accent-foreground: 221 47% 20%;
-    --destructive: 0 56% 39%;
-    --destructive-foreground: 0 0% 98%;
-    --border: 220 19% 91%;
-    --input: 220 19% 88%;
-    --ring: 221 47% 20%;
+    /* Nexa dark theme. Custom tokens (ink/paper/line/ok/danger) live in
+       tailwind.config.ts and are tuned for this dark surface. */
+    --background: 228 45% 8%;
+    --foreground: 222 30% 95%;
+    --card: 228 36% 11%;
+    --card-foreground: 222 30% 95%;
+    --popover: 228 36% 10%;
+    --popover-foreground: 222 30% 95%;
+    --primary: 262 83% 66%;
+    --primary-foreground: 0 0% 100%;
+    --secondary: 228 30% 17%;
+    --secondary-foreground: 222 30% 92%;
+    --muted: 228 30% 16%;
+    --muted-foreground: 222 16% 68%;
+    --accent: 228 30% 19%;
+    --accent-foreground: 222 30% 95%;
+    --destructive: 0 72% 60%;
+    --destructive-foreground: 0 0% 100%;
+    --border: 228 28% 19%;
+    --input: 228 28% 24%;
+    --ring: 262 83% 66%;
     --radius: 0.75rem;
   }
 }
@@ -35,18 +34,17 @@
     @apply border-border;
   }
   body {
-    @apply bg-background text-foreground antialiased;
+    @apply text-foreground antialiased;
+    background-color: #0a0f1e;
+    background-image:
+      radial-gradient(55rem 38rem at 115% -10%, rgba(168, 85, 247, 0.17), transparent 60%),
+      radial-gradient(48rem 34rem at -15% -5%, rgba(34, 211, 238, 0.14), transparent 60%),
+      radial-gradient(46rem 46rem at 50% 125%, rgba(236, 72, 153, 0.12), transparent 62%);
+    background-attachment: fixed;
   }
   h1,
   h2,
   h3 {
     @apply tracking-tight;
-  }
-}
-
-@layer utilities {
-  /* Soft elevated surface used across the app's cards */
-  .surface {
-    @apply rounded-xl border border-line/70 bg-card shadow-sm;
   }
 }

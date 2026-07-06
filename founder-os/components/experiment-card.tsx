@@ -126,9 +126,9 @@ export function ExperimentCard({
               <Badge
                 className={
                   experiment.decision === "kill"
-                    ? "bg-danger hover:bg-danger"
+                    ? "border-transparent bg-danger/15 text-danger hover:bg-danger/15"
                     : experiment.decision === "scale"
-                      ? "bg-ok hover:bg-ok"
+                      ? "border-transparent bg-ok/15 text-ok hover:bg-ok/15"
                       : ""
                 }
                 variant={

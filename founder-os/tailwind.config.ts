@@ -9,14 +9,13 @@ const config: Config = {
   theme: {
     extend: {
       colors: {
-        // Design tokens (CLAUDE.md section 3).
-        // "muted" (#5A6472) is exposed as --muted-foreground below to avoid
-        // clashing with shadcn's muted surface color.
-        ink: "#1B2A4A",
-        paper: "#FAFAFA",
-        line: "#E3E6EC",
-        danger: "#9B2C2C",
-        ok: "#24603B",
+        // Nexa dark-theme tokens. "ink" is the high-emphasis text/chip color,
+        // "paper" the page base; secondary text uses --muted-foreground.
+        ink: "#EEF1FA",
+        paper: "#0A0F1E",
+        line: "#242C4A",
+        danger: "#F87171",
+        ok: "#34D399",
         // shadcn semantic colors, mapped to the tokens above via CSS variables
         border: "hsl(var(--border))",
         input: "hsl(var(--input))",

@@ -71,7 +71,7 @@ export default async function LogPage() {
                         {logSummary(log)}
                       </span>
                       {typeof data.ai_score === "number" && (
-                        <Badge className="ml-auto shrink-0 bg-ink tabular-nums hover:bg-ink">
+                        <Badge className="ml-auto shrink-0 border-transparent bg-gradient-to-r from-indigo-500 to-fuchsia-500 tabular-nums text-white">
                           {d.dashboard.aiScore} {data.ai_score}/10
                         </Badge>
                       )}

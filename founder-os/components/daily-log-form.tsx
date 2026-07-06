@@ -9,7 +9,6 @@ import { PrimaryCta } from "@/components/primary-cta"
 import { Checkbox } from "@/components/ui/checkbox"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
-import { Slider } from "@/components/ui/slider"
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { cn } from "@/lib/utils"
 
@@ -22,7 +21,6 @@ export function DailyLogForm({ workspaceId }: { workspaceId: string }) {
   const d = useT()
   const locale = useLocale()
   const [type, setType] = useState<LogType>("daily")
-  const [score, setScore] = useState(70)
   const [energy, setEnergy] = useState(3)
   const [note, setNote] = useState("")
   const [topAction, setTopAction] = useState("")
@@ -57,13 +55,15 @@ export function DailyLogForm({ workspaceId }: { workspaceId: string }) {
           }
         : { note: note.trim() }
 
+    // The day score is not self-reported — the AI sets it after judging the
+    // entry against the workspace goals (see /api/ai/productivity-score).
     const { data: inserted, error: insertError } = await supabase
       .from("logs")
       .insert({
         user_id: user.id,
         workspace_id: workspaceId,
         type,
-        score: type === "daily" ? score : null,
+        score: null,
         data,
       })
       .select()
@@ -83,8 +83,6 @@ export function DailyLogForm({ workspaceId }: { workspaceId: string }) {
     setTimeout(() => setSaved(false), 3000)
     router.refresh()
 
-    // AI productivity score, applied in the background — the entry is already
-    // saved; the badge appears in the list once scoring completes.
     setScoring(true)
     fetch("/api/ai/productivity-score", {
       method: "POST",
@@ -115,23 +113,6 @@ export function DailyLogForm({ workspaceId }: { workspaceId: string }) {
       {type === "daily" && (
         <>
           <div className="space-y-2">
-            <div className="flex items-baseline justify-between">
-              <Label htmlFor="score">{d.log.score}</Label>
-              <span className="text-2xl font-semibold tabular-nums text-ink">
-                {score}
-              </span>
-            </div>
-            <Slider
-              id="score"
-              value={[score]}
-              onValueChange={([value]) => setScore(value)}
-              max={100}
-              step={5}
-              aria-label={d.log.score}
-            />
-          </div>
-
-          <div className="space-y-2">
             <Label>{d.log.energy}</Label>
             <div
               className="grid grid-cols-5 gap-2"
@@ -146,9 +127,9 @@ export function DailyLogForm({ workspaceId }: { workspaceId: string }) {
                   aria-checked={energy === level}
                   onClick={() => setEnergy(level)}
                   className={cn(
-                    "h-11 rounded-lg border text-sm font-medium tabular-nums transition-colors",
+                    "h-11 rounded-lg border text-sm font-medium tabular-nums transition-all",
                     energy === level
-                      ? "border-ink bg-ink text-paper"
+                      ? "border-transparent bg-gradient-to-r from-indigo-500 to-fuchsia-500 text-white shadow-md shadow-violet-950/50"
                       : "border-line bg-card text-muted-foreground hover:text-ink"
                   )}
                 >
@@ -194,6 +175,8 @@ export function DailyLogForm({ workspaceId }: { workspaceId: string }) {
           onChange={(e) => setNote(e.target.value)}
         />
       </div>
+
+      <p className="text-xs text-muted-foreground">{d.log.aiHint}</p>
 
       {error && <p className="text-sm text-danger">{error}</p>}
       <div className="flex items-center gap-3">

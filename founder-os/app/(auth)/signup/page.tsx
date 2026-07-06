@@ -59,8 +59,11 @@ export default function SignupPage() {
       </div>
       <Card className="w-full max-w-sm shadow-sm">
         <CardHeader>
-          <CardTitle className="text-3xl font-bold tracking-tight text-ink">
-            Nexa<span className="text-ok">.</span>
+          <CardTitle className="text-3xl font-bold tracking-tight">
+            <span className="bg-gradient-to-r from-cyan-300 via-violet-400 to-fuchsia-400 bg-clip-text text-transparent">
+              Nexa
+            </span>
+            <span className="text-fuchsia-400">.</span>
           </CardTitle>
           <CardDescription>
             {d.app.slogan} {d.auth.signupSubtitle}

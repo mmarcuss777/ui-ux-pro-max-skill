@@ -38,7 +38,7 @@ export function AppNav() {
             className={cn(
               "flex h-9 shrink-0 items-center rounded-full px-4 text-sm font-medium transition-colors",
               isActive
-                ? "bg-ink text-paper shadow-sm"
+                ? "bg-gradient-to-r from-indigo-500 via-violet-500 to-fuchsia-500 text-white shadow-md shadow-violet-950/50"
                 : "text-muted-foreground hover:bg-secondary hover:text-ink"
             )}
           >
