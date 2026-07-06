@@ -2,6 +2,7 @@ import type { Metadata, Viewport } from "next"
 import { Inter } from "next/font/google"
 
 import { LocaleProvider } from "@/components/locale-provider"
+import { SwRegister } from "@/components/sw-register"
 import { getLocale } from "@/lib/i18n-server"
 import "./globals.css"
 
@@ -40,6 +41,7 @@ export default function RootLayout({
     <html lang={locale}>
       <body className={`${inter.variable} font-sans`}>
         <LocaleProvider locale={locale}>{children}</LocaleProvider>
+        <SwRegister />
       </body>
     </html>
   )

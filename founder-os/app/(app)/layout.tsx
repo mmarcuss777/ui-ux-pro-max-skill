@@ -6,7 +6,6 @@ import { LanguageToggle } from "@/components/language-toggle"
 import { LogoutButton } from "@/components/logout-button"
 import { MobileMenu } from "@/components/mobile-menu"
 import { WorkspaceSwitcher } from "@/components/workspace-switcher"
-import { createClient } from "@/lib/supabase/server"
 import { getWorkspaces, resolveActiveWorkspace } from "@/lib/workspace"
 
 export default async function AppLayout({
@@ -14,14 +13,10 @@ export default async function AppLayout({
 }: {
   children: React.ReactNode
 }) {
-  const supabase = createClient()
-  const {
-    data: { user },
-  } = await supabase.auth.getUser()
-  if (!user) {
-    redirect("/login")
-  }
-
+  // Auth is already enforced by middleware for every route this layout
+  // wraps (unauthenticated requests are redirected before they get here) —
+  // checking again here would just be a second network round trip to
+  // Supabase Auth on every navigation.
   const workspaces = await getWorkspaces()
   if (workspaces.length === 0) {
     redirect("/onboarding")
@@ -39,7 +34,7 @@ export default async function AppLayout({
             <span className="gold-text">Nexa</span>
             <span className="text-gold-dark">.</span>
           </Link>
-          <div className="flex items-center gap-1.5">
+          <div className="hidden items-center gap-1.5 md:flex">
             <LanguageToggle />
             <WorkspaceSwitcher
               workspaces={workspaces.map(({ id, name, status }) => ({
@@ -50,8 +45,15 @@ export default async function AppLayout({
               activeId={active.id}
             />
             <LogoutButton />
-            <MobileMenu />
           </div>
+          <MobileMenu
+            workspaces={workspaces.map(({ id, name, status }) => ({
+              id,
+              name,
+              status,
+            }))}
+            activeId={active.id}
+          />
         </div>
         <AppNav />
       </header>

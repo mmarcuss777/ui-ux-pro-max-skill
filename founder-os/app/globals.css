@@ -36,9 +36,12 @@
   html {
     -webkit-tap-highlight-color: transparent;
     scroll-behavior: smooth;
+    overflow-x: hidden;
   }
   body {
     @apply text-foreground antialiased;
+    overflow-x: hidden;
+    overscroll-behavior-x: none;
     background-color: #fcfbf7;
     background-image: linear-gradient(
       180deg,
@@ -76,29 +79,27 @@
     @apply bg-gradient-to-r from-gold via-gold-dark to-gold bg-clip-text text-transparent;
   }
   /* Signature gold gradient — fills (buttons, pills, chips). Deep-bronze
-     text for contrast; a slow sheen drifts across the gradient. */
+     text for contrast; the sheen only moves in response to touch/hover,
+     never idles, so it costs nothing while the screen is still. */
   .gold-fill {
     @apply border-0 bg-gradient-to-br from-gold-light via-gold to-gold-dark text-[#2A2107];
-    background-size: 180% 180%;
-    animation: gold-sheen 7s ease-in-out infinite;
+    background-size: 160% 160%;
+    background-position: 0% 0%;
+    transition: background-position 0.5s cubic-bezier(0.22, 1, 0.36, 1);
   }
-  @keyframes gold-sheen {
-    0%,
-    100% {
-      background-position: 0% 0%;
-    }
-    50% {
-      background-position: 100% 100%;
+  @media (hover: hover) {
+    .gold-fill:hover {
+      background-position: 60% 60%;
     }
   }
-  @media (prefers-reduced-motion: reduce) {
-    .gold-fill {
-      animation: none;
-    }
+  .gold-fill:active {
+    background-position: 100% 100%;
   }
-  /* Frosted chrome — header, bottom dock */
+  /* Frosted chrome — header, bottom dock. A lighter blur radius than a
+     typical glass panel: iOS Safari repaints this on every scroll frame
+     since it's sticky/fixed, so cheaper blur keeps scrolling smooth. */
   .glass {
-    @apply border-black/[0.06] bg-white/70 backdrop-blur-2xl backdrop-saturate-150;
+    @apply border-black/[0.06] bg-white/80 backdrop-blur-md backdrop-saturate-150;
   }
   /* Card material: white porcelain, hairline border, soft diffuse shadow.
      Lifts gently under a pointer. */
