@@ -4,6 +4,17 @@ import { useState } from "react"
 import { useRouter } from "next/navigation"
 
 import { useT } from "@/components/locale-provider"
+import { daysAgo, today } from "@/lib/dates"
+import type { MissionData } from "@/lib/log-schema"
+import {
+  actionDates,
+  dailyScore,
+  pillarComplete,
+  pillarEvidence,
+  streak,
+  weekPillarDays,
+  type Pillar,
+} from "@/lib/stats"
 import { createClient } from "@/lib/supabase/client"
 import { PrimaryCta } from "@/components/primary-cta"
 import { Checkbox } from "@/components/ui/checkbox"
@@ -11,8 +22,20 @@ import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { cn } from "@/lib/utils"
+import type { Log, Transaction } from "@/types/db"
 
 type Tab = "daily" | "body" | "mind" | "build" | "money"
+
+// What the user gets back the moment a log lands — score, streak, and
+// one short line. Computed from data already in the database; AI never
+// runs here, so the reward is instant.
+type Feedback = {
+  message: string
+  score: number
+  streakDays: number
+  weekDays: number | null
+  pillarsDone: number
+}
 
 const LEVELS = [1, 2, 3, 4, 5]
 
@@ -65,7 +88,7 @@ export function LogForm({ workspaceId }: { workspaceId: string }) {
   const [txType, setTxType] = useState<"in" | "out">("out")
   const [category, setCategory] = useState("")
   const [saving, setSaving] = useState(false)
-  const [saved, setSaved] = useState(false)
+  const [feedback, setFeedback] = useState<Feedback | null>(null)
   const [error, setError] = useState<string | null>(null)
 
   function reset() {
@@ -77,11 +100,50 @@ export function LogForm({ workspaceId }: { workspaceId: string }) {
     setCategory("")
   }
 
+  // One fast query after the insert turns raw data into the reward:
+  // today's score, current streak, and this pillar's week count.
+  async function computeFeedback(
+    supabase: ReturnType<typeof createClient>
+  ): Promise<Feedback> {
+    const monthAgo = daysAgo(29)
+    const [{ data: recentLogs }, { data: recentTx }] = await Promise.all([
+      supabase.from("logs").select("*").gte("date", monthAgo),
+      supabase.from("transactions").select("*").gte("date", monthAgo),
+    ])
+    const logsArr = (recentLogs ?? []) as Log[]
+    const txArr = (recentTx ?? []) as Transaction[]
+    const todayLogs = logsArr.filter((l) => l.date === today())
+    const todayTx = txArr.filter((t) => t.date === today())
+    const missionRow = todayLogs.find((l) => l.type === "mission")
+    const mission = missionRow
+      ? ((missionRow.data ?? {}) as MissionData)
+      : null
+    const complete = pillarComplete(
+      mission,
+      pillarEvidence(todayLogs, todayTx)
+    )
+    const score = dailyScore(complete)
+    const pillar: Pillar | null = tab === "daily" ? null : tab
+    const message =
+      score === 100
+        ? d.feedback.allPillars
+        : pillar
+          ? d.feedback[pillar]
+          : d.feedback.logged
+    return {
+      message,
+      score,
+      streakDays: streak(actionDates(logsArr, txArr)),
+      weekDays: pillar ? weekPillarDays(logsArr, txArr, pillar) : null,
+      pillarsDone: Object.values(complete).filter(Boolean).length,
+    }
+  }
+
   async function handleSubmit(event: React.FormEvent) {
     event.preventDefault()
     setSaving(true)
     setError(null)
-    setSaved(false)
+    setFeedback(null)
 
     const supabase = createClient()
     const {
@@ -126,14 +188,14 @@ export function LogForm({ workspaceId }: { workspaceId: string }) {
       problem = error
     }
 
-    setSaving(false)
     if (problem) {
+      setSaving(false)
       setError(problem.message ?? d.common.error)
       return
     }
     reset()
-    setSaved(true)
-    setTimeout(() => setSaved(false), 3000)
+    setFeedback(await computeFeedback(supabase))
+    setSaving(false)
     router.refresh()
   }
 
@@ -146,7 +208,13 @@ export function LogForm({ workspaceId }: { workspaceId: string }) {
 
   return (
     <form onSubmit={handleSubmit} className="space-y-5">
-      <Tabs value={tab} onValueChange={(value) => setTab(value as Tab)}>
+      <Tabs
+        value={tab}
+        onValueChange={(value) => {
+          setTab(value as Tab)
+          setFeedback(null)
+        }}
+      >
         <TabsList className="grid h-11 w-full grid-cols-5">
           <TabsTrigger value="daily" className="h-9 px-1 text-xs sm:text-sm">
             {d.log.dailyTab}
@@ -265,16 +333,48 @@ export function LogForm({ workspaceId }: { workspaceId: string }) {
       </div>
 
       {error && <p className="text-sm text-danger">{error}</p>}
-      <div className="flex items-center gap-3">
-        <PrimaryCta type="submit" className="w-full sm:w-auto" disabled={saving}>
-          {saving ? d.common.saving : d.log.addLog}
-        </PrimaryCta>
-        {saved && (
-          <span className="text-sm text-ok" role="status">
-            {d.common.saved}
-          </span>
-        )}
-      </div>
+      <PrimaryCta type="submit" className="w-full sm:w-auto" disabled={saving}>
+        {saving ? d.common.saving : d.log.addLog}
+      </PrimaryCta>
+
+      {feedback && (
+        <div
+          role="status"
+          className="animate-fade-up rounded-xl border border-gold/30 bg-gold/[0.07] p-4"
+        >
+          <p className="text-sm font-semibold text-ink">{feedback.message}</p>
+          <div className="mt-2 flex flex-wrap gap-x-4 gap-y-1 text-xs text-muted-foreground">
+            <span className="tabular-nums">
+              <span className="font-semibold text-gold-dark">
+                {feedback.score}/100
+              </span>{" "}
+              {d.feedback.scoreLabel}
+            </span>
+            <span className="tabular-nums">
+              <span className="font-semibold text-gold-dark">
+                {feedback.streakDays}
+                {d.feedback.daysShort}
+              </span>{" "}
+              {d.feedback.streakLabel}
+            </span>
+            {feedback.weekDays !== null ? (
+              <span className="tabular-nums">
+                <span className="font-semibold text-gold-dark">
+                  {feedback.weekDays}/7
+                </span>{" "}
+                {d.feedback.weekLabel}
+              </span>
+            ) : (
+              <span className="tabular-nums">
+                <span className="font-semibold text-gold-dark">
+                  {feedback.pillarsDone}/4
+                </span>{" "}
+                {d.today.pillarsOf}
+              </span>
+            )}
+          </div>
+        </div>
+      )}
     </form>
   )
 }

@@ -13,7 +13,6 @@ import {
 import { useT } from "@/components/locale-provider"
 import { createClient } from "@/lib/supabase/client"
 import type { MissionData, Pillar } from "@/lib/stats"
-import { PrimaryCta } from "@/components/primary-cta"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import {
@@ -127,9 +126,13 @@ export function MissionPanel({
                 {d.today.editMission}
               </Button>
             ) : (
-              <PrimaryCta className="h-9 px-4 text-sm">
+              <Button
+                variant="outline"
+                size="sm"
+                className="h-9 border-gold/40 px-4 text-sm text-gold-dark hover:text-gold-dark"
+              >
                 {d.today.setMission}
-              </PrimaryCta>
+              </Button>
             )}
           </DialogTrigger>
           <DialogContent>

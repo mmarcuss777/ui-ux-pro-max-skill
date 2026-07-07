@@ -66,12 +66,20 @@ export function ScoreRing({
         />
       </svg>
       <div className="absolute inset-0 flex flex-col items-center justify-center">
-        <span className="text-4xl font-bold tabular-nums text-ink">
+        <span
+          className={
+            size < 120
+              ? "text-2xl font-bold tabular-nums text-ink"
+              : "text-4xl font-bold tabular-nums text-ink"
+          }
+        >
           {clamped}
         </span>
-        <span className="text-[11px] font-medium uppercase tracking-wider text-muted-foreground">
-          / 100
-        </span>
+        {size >= 120 && (
+          <span className="text-[11px] font-medium uppercase tracking-wider text-muted-foreground">
+            / 100
+          </span>
+        )}
       </div>
     </div>
   )
