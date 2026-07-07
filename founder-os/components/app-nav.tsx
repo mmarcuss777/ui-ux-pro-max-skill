@@ -65,49 +65,9 @@ export function AppNav() {
   )
 }
 
-// Slim pill row under the mobile header: the three destinations that
-// don't fit the dock stay one visible tap away on every page — nothing
-// hides behind the hamburger. Same pill language as the desktop nav.
-export function MobileQuickNav() {
-  const pathname = usePathname()
-  const d = useT()
-
-  const links = [
-    { href: "/build", label: d.nav.build },
-    { href: "/money", label: d.money.title },
-    { href: "/review", label: d.nav.review },
-  ]
-
-  return (
-    <nav
-      aria-label="Sections"
-      className="mx-auto flex max-w-5xl gap-1.5 px-4 pb-2.5 md:hidden"
-    >
-      {links.map((link) => {
-        const isActive = pathname.startsWith(link.href)
-        return (
-          <Link
-            key={link.href}
-            href={link.href}
-            aria-current={isActive ? "page" : undefined}
-            className={cn(
-              "flex h-8 items-center rounded-full px-3.5 text-xs font-medium transition-colors",
-              isActive
-                ? "gold-fill font-semibold"
-                : "border border-black/[0.07] bg-white/60 text-muted-foreground"
-            )}
-          >
-            {link.label}
-          </Link>
-        )
-      })}
-    </nav>
-  )
-}
-
 // Floating glass dock — mobile only. All four everyday destinations plus
-// the raised gold Log button; Build, Money, Review live in the top pill
-// row as well as the header menu.
+// the raised gold Log button; Build, Money, Review live as gold icons in
+// the header as well as the header menu.
 export function BottomNav() {
   const pathname = usePathname()
   const d = useT()
