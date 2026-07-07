@@ -1,14 +1,14 @@
 "use client"
 
-import { useState } from "react"
+import { useRef, useState } from "react"
 import { useRouter } from "next/navigation"
 
 import { useT } from "@/components/locale-provider"
 import { createClient } from "@/lib/supabase/client"
 
-// Minimalist gold trash button for a single entry. One tap removes the row
-// (optimistically hidden, then refreshed). Small and edge-aligned so it
-// stays quiet until wanted.
+// Minimalist gold trash button for a single entry. The WHOLE row fades
+// and slides out the instant it's tapped (optimistic), the delete and
+// refresh run behind the animation — removal never feels like a hard cut.
 export function DeleteEntry({
   table,
   id,
@@ -18,28 +18,54 @@ export function DeleteEntry({
 }) {
   const router = useRouter()
   const d = useT()
-  const [gone, setGone] = useState(false)
+  const buttonRef = useRef<HTMLButtonElement>(null)
   const [busy, setBusy] = useState(false)
+
+  function rowElement(): HTMLElement | null {
+    return buttonRef.current?.closest("li") ?? null
+  }
 
   async function remove() {
     setBusy(true)
+    // Optimistic exit: collapse the row visually right away.
+    const row = rowElement()
+    if (row) {
+      row.style.transition =
+        "opacity 0.18s ease-out, transform 0.18s ease-out, max-height 0.22s ease-out 0.1s, padding 0.22s ease-out 0.1s"
+      row.style.maxHeight = `${row.offsetHeight}px`
+      row.style.overflow = "hidden"
+      requestAnimationFrame(() => {
+        row.style.opacity = "0"
+        row.style.transform = "translateX(8px)"
+        row.style.maxHeight = "0"
+        row.style.paddingTop = "0"
+        row.style.paddingBottom = "0"
+      })
+    }
+
     const supabase = createClient()
     const { error } =
       table === "logs"
         ? await supabase.from("logs").delete().eq("id", id)
         : await supabase.from("transactions").delete().eq("id", id)
     if (error) {
+      // Roll the animation back — the row is still real.
+      if (row) {
+        row.style.opacity = "1"
+        row.style.transform = ""
+        row.style.maxHeight = ""
+        row.style.paddingTop = ""
+        row.style.paddingBottom = ""
+      }
       setBusy(false)
       return
     }
-    setGone(true)
     router.refresh()
   }
 
-  if (gone) return null
-
   return (
     <button
+      ref={buttonRef}
       type="button"
       onClick={remove}
       disabled={busy}

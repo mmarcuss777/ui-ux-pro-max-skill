@@ -64,7 +64,9 @@ export default async function AppLayout({
       {/* Bottom padding clears the fixed mobile dock (its height + the
           device safe-area inset) so nothing hides behind it. Desktop has
           no dock, so it drops back to a normal gap. */}
-      <main className="mx-auto w-full max-w-5xl animate-fade-up px-4 py-6 pb-[calc(9.5rem+env(safe-area-inset-bottom))] md:pb-8">
+      {/* Page-enter animation lives in template.tsx (per navigation) —
+          the main shell stays static so nothing double-animates. */}
+      <main className="mx-auto w-full max-w-5xl px-4 py-6 pb-[calc(9.5rem+env(safe-area-inset-bottom))] md:pb-8">
         {children}
       </main>
       <BottomNav />

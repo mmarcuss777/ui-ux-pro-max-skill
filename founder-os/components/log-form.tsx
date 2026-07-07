@@ -285,6 +285,9 @@ export function LogForm({ workspaceId }: { workspaceId: string }) {
         </TabsList>
       </Tabs>
 
+      {/* Keyed wrapper: switching tabs re-mounts the panel with a quick
+          fade so the swap never feels like a hard cut. */}
+      <div key={tab} className="animate-tab space-y-5">
       {tab === "daily" && (
         <>
           <LevelPicker label={d.log.energy} value={energy} onChange={setEnergy} />
@@ -440,6 +443,7 @@ export function LogForm({ workspaceId }: { workspaceId: string }) {
           value={note}
           onChange={(e) => setNote(e.target.value)}
         />
+      </div>
       </div>
 
       {error && <p className="text-sm text-danger">{error}</p>}

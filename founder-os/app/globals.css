@@ -126,6 +126,21 @@
   .animate-glow {
     animation: nexa-glow 0.7s ease-out;
   }
+  /* Every page enters with the same quick rise-and-fade (mounted from
+     template.tsx on each navigation). Transform + opacity only. */
+  .animate-page {
+    animation: nexa-page 0.24s cubic-bezier(0.22, 1, 0.36, 1) both;
+  }
+  /* Tab/panel content swap — subtler and faster than a page. */
+  .animate-tab {
+    animation: nexa-tab 0.16s ease-out both;
+  }
+  /* One shared press affordance for anything tappable that isn't a
+     Button. Use this on new interactive elements — smoothness stays
+     consistent by default. */
+  .pressable {
+    @apply transition-transform duration-150 ease-spring active:scale-[0.97];
+  }
   /* Card material: white porcelain, hairline border, soft diffuse shadow.
      Lifts gently under a pointer. */
   .surface {
@@ -161,5 +176,38 @@
   }
   100% {
     box-shadow: 0 0 0 16px rgba(201, 162, 39, 0);
+  }
+}
+@keyframes nexa-page {
+  from {
+    opacity: 0;
+    transform: translateY(6px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+@keyframes nexa-tab {
+  from {
+    opacity: 0;
+    transform: translateY(3px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+/* Accessibility + guaranteed calm: users who ask for reduced motion get
+   an instant UI — every animation and transition collapses to a frame. */
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
   }
 }
