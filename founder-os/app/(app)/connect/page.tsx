@@ -1,4 +1,10 @@
-import { CONNECTORS, PROVIDER_NAMES } from "@/lib/connectors/registry"
+import {
+  CONNECTORS,
+  PROVIDER_NAMES,
+  type ConnectorMeta,
+  type PillarKey,
+  type Provider,
+} from "@/lib/connectors/registry"
 import { ConnectActions } from "@/components/connect-actions"
 import { Badge } from "@/components/ui/badge"
 import { Card, CardContent } from "@/components/ui/card"
@@ -81,6 +87,83 @@ export default async function ConnectPage() {
     return dict[`m_${key}`] ?? key
   }
 
+  // One-click "connect with account" where the OAuth app is configured.
+  // Cards that depend on OAuth env (Google) fall back to coming-soon
+  // until the keys are in place.
+  const oauthUrls: Partial<Record<Provider, string>> = {
+    ...(process.env.GITHUB_CLIENT_ID
+      ? { github: "/api/integrations/github/start" }
+      : {}),
+    ...(process.env.GOOGLE_CLIENT_ID
+      ? { gcal: "/api/integrations/gcal/start" }
+      : {}),
+  }
+  const isLive = (c: ConnectorMeta) =>
+    c.availability === "ready" && (c.provider !== "gcal" || Boolean(oauthUrls.gcal))
+  const live = CONNECTORS.filter(isLive)
+  const soon = CONNECTORS.filter((c) => !isLive(c))
+  const pillarOrder: PillarKey[] = ["body", "mind", "build", "money"]
+
+  const card = (connector: ConnectorMeta, isReady: boolean) => {
+    const row = rows.find((r) => r.provider === connector.provider)
+    const isConnected = row?.status === "connected"
+    const hasError = row?.status === "error"
+    return (
+      <Card key={connector.provider}>
+        <CardContent className="space-y-2.5 p-4">
+          <div className="flex items-center justify-between gap-3">
+            <div className="flex min-w-0 items-center gap-2">
+              <p className="truncate text-sm font-semibold text-ink">
+                {PROVIDER_NAMES[connector.provider]}
+              </p>
+              <Badge
+                variant="outline"
+                className="shrink-0 border-gold/30 text-[10px] text-gold-dark"
+              >
+                {d.pillars[connector.pillar]}
+              </Badge>
+            </div>
+            <span
+              className={
+                isConnected
+                  ? "shrink-0 text-xs font-semibold text-ok"
+                  : hasError
+                    ? "shrink-0 text-xs font-semibold text-danger"
+                    : "shrink-0 text-xs text-muted-foreground"
+              }
+            >
+              {isConnected
+                ? `${d.connect.connected}${
+                    row?.last_sync_at
+                      ? ` · ${d.connect.lastSync} ${new Date(row.last_sync_at).toLocaleTimeString(locale === "sk" ? "sk-SK" : "en-GB", { hour: "2-digit", minute: "2-digit" })}`
+                      : ""
+                  }`
+                : hasError
+                  ? (row?.error ?? d.common.error).slice(0, 60)
+                  : isReady
+                    ? d.connect.notConnected
+                    : d.connect.comingSoon}
+            </span>
+          </div>
+
+          <p className="text-xs text-muted-foreground">
+            {d.connect.importsLabel}:{" "}
+            {connector.metrics.map(metricLabel).join(" · ")}
+          </p>
+
+          {isReady && (
+            <ConnectActions
+              provider={connector.provider}
+              isConnected={isConnected || hasError}
+              workspaceId={active.id}
+              oauthUrl={oauthUrls[connector.provider]}
+            />
+          )}
+        </CardContent>
+      </Card>
+    )
+  }
+
   return (
     <div className="mx-auto max-w-2xl space-y-6">
       <div>
@@ -117,67 +200,27 @@ export default async function ConnectPage() {
         </CardContent>
       </Card>
 
-      <div className="space-y-3">
-        {CONNECTORS.map((connector) => {
-          const row = rows.find((r) => r.provider === connector.provider)
-          const isConnected = row?.status === "connected"
-          const hasError = row?.status === "error"
-          const isReady = connector.availability === "ready"
-          return (
-            <Card key={connector.provider}>
-              <CardContent className="space-y-2.5 p-4">
-                <div className="flex items-center justify-between gap-3">
-                  <div className="flex min-w-0 items-center gap-2">
-                    <p className="truncate text-sm font-semibold text-ink">
-                      {PROVIDER_NAMES[connector.provider]}
-                    </p>
-                    <Badge
-                      variant="outline"
-                      className="shrink-0 border-gold/30 text-[10px] text-gold-dark"
-                    >
-                      {d.pillars[connector.pillar]}
-                    </Badge>
-                  </div>
-                  <span
-                    className={
-                      isConnected
-                        ? "shrink-0 text-xs font-semibold text-ok"
-                        : hasError
-                          ? "shrink-0 text-xs font-semibold text-danger"
-                          : "shrink-0 text-xs text-muted-foreground"
-                    }
-                  >
-                    {isConnected
-                      ? `${d.connect.connected}${
-                          row?.last_sync_at
-                            ? ` · ${d.connect.lastSync} ${new Date(row.last_sync_at).toLocaleTimeString(locale === "sk" ? "sk-SK" : "en-GB", { hour: "2-digit", minute: "2-digit" })}`
-                            : ""
-                        }`
-                      : hasError
-                        ? (row?.error ?? d.common.error).slice(0, 60)
-                        : isReady
-                          ? d.connect.notConnected
-                          : d.connect.comingSoon}
-                  </span>
-                </div>
+      {pillarOrder.map((pillar) => {
+        const group = live.filter((c) => c.pillar === pillar)
+        if (group.length === 0) return null
+        return (
+          <div key={pillar} className="space-y-3">
+            <p className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
+              {d.pillars[pillar]}
+            </p>
+            {group.map((connector) => card(connector, true))}
+          </div>
+        )
+      })}
 
-                <p className="text-xs text-muted-foreground">
-                  {d.connect.importsLabel}:{" "}
-                  {connector.metrics.map(metricLabel).join(" · ")}
-                </p>
-
-                {isReady && (
-                  <ConnectActions
-                    provider={connector.provider}
-                    isConnected={isConnected || hasError}
-                    workspaceId={active.id}
-                  />
-                )}
-              </CardContent>
-            </Card>
-          )
-        })}
-      </div>
+      {soon.length > 0 && (
+        <div className="space-y-3">
+          <p className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
+            {d.connect.comingSoon}
+          </p>
+          {soon.map((connector) => card(connector, false))}
+        </div>
+      )}
 
       <p className="text-xs text-muted-foreground">{d.connect.principle}</p>
     </div>

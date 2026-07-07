@@ -95,8 +95,9 @@ export const CONNECTORS: ConnectorMeta[] = [
   {
     provider: "gcal",
     pillar: "mind",
-    metrics: ["meetings", "focus_minutes"],
-    availability: "soon",
+    metrics: ["meetings"],
+    // OAuth is built; the card goes live once GOOGLE_CLIENT_ID is set.
+    availability: "ready",
   },
   // ── Business ──────────────────────────────────────────────────────
   {

@@ -46,10 +46,14 @@ export function ConnectActions({
   provider,
   isConnected,
   workspaceId,
+  oauthUrl,
 }: {
   provider: Provider
   isConnected: boolean
   workspaceId: string
+  // When set, connecting is one click through the provider's own login —
+  // no key to paste. Falls back to the key dialog when absent.
+  oauthUrl?: string
 }) {
   const router = useRouter()
   const d = useT()
@@ -81,7 +85,12 @@ export function ConnectActions({
             <a href="/api/integrations/strava/start">{d.connect.connectCta}</a>
           </Button>
         )}
-        {!isConnected && KEY_PROVIDERS.includes(provider) && (
+        {!isConnected && oauthUrl && (
+          <Button asChild variant="outline" size="sm" className="h-9">
+            <a href={oauthUrl}>{d.connect.connectAccount}</a>
+          </Button>
+        )}
+        {!isConnected && !oauthUrl && KEY_PROVIDERS.includes(provider) && (
           <KeyDialog provider={provider} onDone={() => router.refresh()} />
         )}
         {provider === "csv" && (
@@ -131,6 +140,11 @@ export function ConnectActions({
       {provider === "garmin" && (
         <p className="text-[11px] text-muted-foreground">
           {d.connect.garminHint}
+        </p>
+      )}
+      {provider === "gcal" && !isConnected && oauthUrl && (
+        <p className="text-[11px] text-muted-foreground">
+          {d.connect.googleHint}
         </p>
       )}
       {error && <p className="text-xs text-danger">{error}</p>}

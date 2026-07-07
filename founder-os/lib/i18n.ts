@@ -609,6 +609,9 @@ const en = {
     lastSync: "Last sync",
     importsLabel: "Imports",
     connectCta: "Connect",
+    connectAccount: "Connect with account",
+    googleHint:
+      "Google may show an 'unverified app' notice — tap Advanced → Continue. Only you use this app.",
     importCta: "Import CSV",
     disconnect: "Disconnect",
     deleteData: "Delete imported data",
@@ -1271,6 +1274,9 @@ const sk: typeof en = {
     lastSync: "Posledný sync",
     importsLabel: "Importuje",
     connectCta: "Pripojiť",
+    connectAccount: "Pripojiť cez účet",
+    googleHint:
+      "Google môže ukázať upozornenie „neoverená aplikácia“ — klikni Rozšírené → Pokračovať. Aplikáciu používaš len ty.",
     importCta: "Importovať CSV",
     disconnect: "Odpojiť",
     deleteData: "Zmazať importované dáta",

@@ -1,10 +1,40 @@
 import type { SyncFn, ValidateKeyFn } from "@/lib/connectors/types"
 
 // GitHub — commits per day feed the Business pillar. A builder's most
-// honest metric. Personal access token (classic or fine-grained, no
-// scopes needed for public events; `repo` for private), zero approval.
+// honest metric. Connects with one click via OAuth when GITHUB_CLIENT_ID
+// is configured; falls back to a pasted Personal Access Token otherwise.
 
 const API = "https://api.github.com"
+const AUTH_BASE = "https://github.com/login/oauth"
+
+export function githubAuthUrl(redirectUri: string, state: string): string {
+  const params = new URLSearchParams({
+    client_id: process.env.GITHUB_CLIENT_ID ?? "",
+    redirect_uri: redirectUri,
+    state,
+    // No scope requested: public profile + public events are enough.
+  })
+  return `${AUTH_BASE}/authorize?${params}`
+}
+
+export async function githubExchangeCode(
+  code: string
+): Promise<{ accessToken: string; login: string }> {
+  const response = await fetch(`${AUTH_BASE}/access_token`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json", Accept: "application/json" },
+    body: JSON.stringify({
+      client_id: process.env.GITHUB_CLIENT_ID,
+      client_secret: process.env.GITHUB_CLIENT_SECRET,
+      code,
+    }),
+  })
+  if (!response.ok) throw new Error(`GitHub token exchange failed (${response.status})`)
+  const data = (await response.json()) as { access_token?: string }
+  if (!data.access_token) throw new Error("GitHub returned no token")
+  const login = await githubValidate(data.access_token, null)
+  return { accessToken: data.access_token, login }
+}
 
 export const githubValidate: ValidateKeyFn = async (key) => {
   const response = await fetch(`${API}/user`, {

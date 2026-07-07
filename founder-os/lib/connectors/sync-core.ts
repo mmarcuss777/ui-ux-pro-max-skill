@@ -2,6 +2,7 @@ import type { SupabaseClient } from "@supabase/supabase-js"
 
 import { decryptToken, encryptToken } from "@/lib/crypto"
 import type { Json } from "@/types/db"
+import { gcalSync } from "@/lib/connectors/gcal"
 import { githubSync } from "@/lib/connectors/github"
 import { lemonsqueezySync } from "@/lib/connectors/lemonsqueezy"
 import { mailchimpSync } from "@/lib/connectors/mailchimp"
@@ -23,6 +24,7 @@ const SYNC_FNS: Record<string, SyncFn> = {
   shopify: shopifySync,
   plausible: plausibleSync,
   github: githubSync,
+  gcal: gcalSync,
   toggl: togglSync,
   rescuetime: rescuetimeSync,
   mailchimp: mailchimpSync,
