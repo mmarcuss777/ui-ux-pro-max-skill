@@ -50,15 +50,23 @@ export function BuildFormDialog({
   workspaceId,
   build,
   hasActive,
+  open: controlledOpen,
+  onOpenChange,
 }: {
   workspaceId: string
   build?: Build | null
   hasActive: boolean
+  // Controlled mode (no own trigger) — used by the ⋯ menu on the hero.
+  open?: boolean
+  onOpenChange?: (open: boolean) => void
 }) {
   const router = useRouter()
   const d = useT()
   const editing = Boolean(build)
-  const [open, setOpen] = useState(false)
+  const [ownOpen, setOwnOpen] = useState(false)
+  const controlled = controlledOpen !== undefined
+  const open = controlled ? controlledOpen : ownOpen
+  const setOpen = controlled ? (onOpenChange ?? (() => {})) : setOwnOpen
   const [name, setName] = useState(build?.name ?? "")
   const [type, setType] = useState<BuildType>(
     (build?.business_type as BuildType) ?? "ecommerce"
@@ -129,15 +137,17 @@ export function BuildFormDialog({
 
   return (
     <Dialog open={open} onOpenChange={setOpen}>
-      <DialogTrigger asChild>
-        {editing ? (
-          <Button variant="outline" size="sm" className="h-9">
-            {d.common.edit}
-          </Button>
-        ) : (
-          <PrimaryCta>{d.buildPage.newBuild}</PrimaryCta>
-        )}
-      </DialogTrigger>
+      {!controlled && (
+        <DialogTrigger asChild>
+          {editing ? (
+            <Button variant="outline" size="sm" className="h-9">
+              {d.common.edit}
+            </Button>
+          ) : (
+            <PrimaryCta>{d.buildPage.newBuild}</PrimaryCta>
+          )}
+        </DialogTrigger>
+      )}
       <DialogContent className="max-h-[85dvh] overflow-y-auto">
         <DialogHeader>
           <DialogTitle className="text-ink">

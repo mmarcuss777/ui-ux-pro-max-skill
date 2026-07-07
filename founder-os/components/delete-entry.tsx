@@ -13,7 +13,7 @@ export function DeleteEntry({
   table,
   id,
 }: {
-  table: "logs" | "transactions"
+  table: "logs" | "transactions" | "builds"
   id: string
 }) {
   const router = useRouter()
@@ -47,7 +47,9 @@ export function DeleteEntry({
     const { error } =
       table === "logs"
         ? await supabase.from("logs").delete().eq("id", id)
-        : await supabase.from("transactions").delete().eq("id", id)
+        : table === "transactions"
+          ? await supabase.from("transactions").delete().eq("id", id)
+          : await supabase.from("builds").delete().eq("id", id)
     if (error) {
       // Roll the animation back — the row is still real.
       if (row) {

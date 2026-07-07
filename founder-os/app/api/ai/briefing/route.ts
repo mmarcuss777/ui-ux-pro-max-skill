@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server"
 
-import { askAnalyst, languageInstruction } from "@/lib/ai"
+import { askAnalyst, askFast, languageInstruction } from "@/lib/ai"
 import { checkAiLimit, recordAiCall } from "@/lib/ai-usage"
 import { daysAgo, today } from "@/lib/dates"
 import { parseLocale } from "@/lib/i18n"
@@ -154,14 +154,17 @@ export async function POST(request: Request) {
 
   await recordAiCall(supabase, user.id, "briefing")
 
+  // Model routing: the strong model earns its cost only when there is
+  // live data to read. A plan-only briefing runs on the fast model.
+  const hasData = tiles.length > 0
+
   let content: string
   let move: string | null
   try {
-    const raw = await askAnalyst(
-      BRIEFING_SYSTEM + languageInstruction(locale),
-      prompt,
-      700
-    )
+    const system = BRIEFING_SYSTEM + languageInstruction(locale)
+    const raw = hasData
+      ? await askAnalyst(system, prompt, 700)
+      : await askFast(system, prompt, 700)
     const split = splitMove(raw)
     content = split.content
     move = split.move
@@ -174,7 +177,12 @@ export async function POST(request: Request) {
     move = null
   }
 
-  const data: BriefingData = { content, move: move ?? undefined, move_done: false }
+  const data: BriefingData = {
+    content,
+    move: move ?? undefined,
+    move_done: false,
+    full: hasData,
+  }
   if (existing) {
     await supabase.from("logs").update({ data }).eq("id", existing.id)
   } else {

@@ -19,10 +19,13 @@ export function BriefingCard({
   briefingId,
   briefing,
   workspaceId,
+  fullAi,
 }: {
   briefingId: string | null
   briefing: BriefingData | null
   workspaceId: string
+  // Live data present → the strong model runs (shown as a chip).
+  fullAi: boolean
 }) {
   const router = useRouter()
   const d = useT()
@@ -89,6 +92,18 @@ export function BriefingCard({
           <CardTitle className="flex items-center gap-2 text-base text-gold-dark">
             <LightningBoltIcon className="h-4 w-4" />
             {d.briefing.title}
+            <span
+              className={cn(
+                "shrink-0 whitespace-nowrap rounded-full px-2 py-0.5 text-[10px] font-bold uppercase tracking-wide",
+                (briefing?.full ?? fullAi)
+                  ? "gold-fill"
+                  : "bg-secondary text-muted-foreground"
+              )}
+            >
+              {(briefing?.full ?? fullAi)
+                ? d.briefing.fullAi
+                : d.briefing.liteAi}
+            </span>
           </CardTitle>
           <p className="mt-1 text-xs text-muted-foreground">
             {d.briefing.hint}

@@ -51,6 +51,8 @@ export type BriefingData = {
   content?: string
   move?: string
   move_done?: boolean
+  // true when the briefing ran on the strong model (live data present)
+  full?: boolean
 }
 
 // type = 'build' — a completed business step. Written by the step chain
