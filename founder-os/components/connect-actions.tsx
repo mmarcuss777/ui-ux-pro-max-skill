@@ -153,12 +153,16 @@ export function ConnectActions({
 }
 
 // ---- key-paste connect ------------------------------------------------
-function KeyDialog({
+export function KeyDialog({
   provider,
   onDone,
+  label,
 }: {
   provider: Provider
   onDone: () => void
+  // Custom trigger text (e.g. the provider name when embedded in a
+  // section instead of the Connect catalog).
+  label?: string
 }) {
   const d = useT()
   const [open, setOpen] = useState(false)
@@ -191,7 +195,7 @@ function KeyDialog({
     <Dialog open={open} onOpenChange={setOpen}>
       <DialogTrigger asChild>
         <Button variant="outline" size="sm" className="h-9">
-          {d.connect.connectCta}
+          {label ?? d.connect.connectCta}
         </Button>
       </DialogTrigger>
       <DialogContent className="max-h-[85dvh] overflow-y-auto">
