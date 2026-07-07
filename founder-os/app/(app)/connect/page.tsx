@@ -115,12 +115,10 @@ export default async function ConnectPage() {
           const row = rows.find((r) => r.provider === connector.provider)
           const isConnected = row?.status === "connected"
           const hasError = row?.status === "error"
-          const isReady =
-            connector.availability === "ready" ||
-            connector.provider === "strava" ||
-            connector.provider === "stripe" ||
-            connector.provider === "shopify" ||
-            connector.provider === "plausible"
+          const isReady = ![
+            "apple_health",
+            "ga4",
+          ].includes(connector.provider)
           return (
             <Card key={connector.provider}>
               <CardContent className="space-y-2.5 p-4">

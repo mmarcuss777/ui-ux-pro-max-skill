@@ -651,6 +651,12 @@ const en = {
     rowsWord: "rows",
     skipCol: "— skip —",
     stravaHint: "Garmin users: link Garmin → Strava in the Strava app and your watch data flows in here.",
+    garminHint: "Export activities from Garmin Connect (web → Activities → export CSV) and import them here. Direct sync unlocks after Garmin approves API access.",
+    importActivities: "Import activities",
+    colDuration: "Duration",
+    colDistance: "Distance",
+    kindMoney: "Money",
+    kindFitness: "Fitness",
   },
 }
 
@@ -1300,6 +1306,12 @@ const sk: typeof en = {
     rowsWord: "riadkov",
     skipCol: "— preskočiť —",
     stravaHint: "Garmin: v Strava appke prepoj Garmin → Strava a dáta z hodiniek tečú sem.",
+    garminHint: "Exportuj aktivity z Garmin Connect (web → Aktivity → export CSV) a naimportuj ich sem. Priamy sync sa odomkne po schválení Garmin API prístupu.",
+    importActivities: "Importovať aktivity",
+    colDuration: "Trvanie",
+    colDistance: "Vzdialenosť",
+    kindMoney: "Peniaze",
+    kindFitness: "Fitness",
   },
 }
 

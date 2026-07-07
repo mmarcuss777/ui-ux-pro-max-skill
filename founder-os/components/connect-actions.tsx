@@ -71,7 +71,12 @@ export function ConnectActions({
             provider === "plausible") && (
             <KeyDialog provider={provider} onDone={() => router.refresh()} />
           )}
-        {provider === "csv" && <CsvDialog workspaceId={workspaceId} />}
+        {provider === "csv" && (
+          <CsvDialog workspaceId={workspaceId} kind="money" />
+        )}
+        {provider === "garmin" && !isConnected && (
+          <CsvDialog workspaceId={workspaceId} kind="fitness" />
+        )}
 
         {isConnected && (
           <>
@@ -108,6 +113,11 @@ export function ConnectActions({
       {provider === "strava" && (
         <p className="text-[11px] text-muted-foreground">
           {d.connect.stravaHint}
+        </p>
+      )}
+      {provider === "garmin" && (
+        <p className="text-[11px] text-muted-foreground">
+          {d.connect.garminHint}
         </p>
       )}
       {error && <p className="text-xs text-danger">{error}</p>}
@@ -240,7 +250,27 @@ function normalizeDate(raw: string): string | null {
   return null
 }
 
-function CsvDialog({ workspaceId }: { workspaceId: string }) {
+// "HH:MM:SS" / "MM:SS" / plain minutes → minutes.
+function durationToMinutes(raw: string): number {
+  const value = raw.trim()
+  if (!value) return 0
+  const parts = value.split(":").map(Number)
+  if (parts.some((n) => !Number.isFinite(n))) {
+    const plain = Number(value.replace(",", "."))
+    return Number.isFinite(plain) ? Math.round(plain) : 0
+  }
+  if (parts.length === 3) return Math.round(parts[0] * 60 + parts[1] + parts[2] / 60)
+  if (parts.length === 2) return Math.round(parts[0] + parts[1] / 60)
+  return Math.round(parts[0])
+}
+
+function CsvDialog({
+  workspaceId,
+  kind,
+}: {
+  workspaceId: string
+  kind: "money" | "fitness"
+}) {
   const d = useT()
   const router = useRouter()
   const [open, setOpen] = useState(false)
@@ -269,18 +299,95 @@ function CsvDialog({ workspaceId }: { workspaceId: string }) {
       const lower = parsed[0].map((h) => h.trim().toLowerCase())
       const guess = (...names: string[]) =>
         lower.findIndex((h) => names.some((n) => h.includes(n)))
-      setMapping({
-        date: guess("date", "dátum", "datum"),
-        amount: guess("amount", "suma", "total", "price"),
-        type: guess("type", "typ"),
-        category: guess("category", "kategór"),
-        note: guess("note", "popis", "description", "poznám"),
-      })
+      setMapping(
+        kind === "money"
+          ? {
+              date: guess("date", "dátum", "datum"),
+              amount: guess("amount", "suma", "total", "price"),
+              type: guess("type", "typ"),
+              category: guess("category", "kategór"),
+              note: guess("note", "popis", "description", "poznám"),
+            }
+          : {
+              date: guess("date", "dátum", "datum"),
+              duration: guess("time", "duration", "trvanie", "čas"),
+              distance: guess("distance", "vzdial"),
+            }
+      )
     }
     reader.readAsText(file)
   }
 
-  async function importRows() {
+  async function importFitness() {
+    setBusy(true)
+    setError(null)
+    const supabase = createClient()
+    const {
+      data: { user },
+    } = await supabase.auth.getUser()
+    if (!user) return
+
+    // Aggregate activities per day: workout count + total minutes + km.
+    const byDay = new Map<string, { workouts: number; minutes: number; km: number }>()
+    for (const row of rows) {
+      const date = normalizeDate(row[mapping.date] ?? "")
+      if (!date) continue
+      const day = byDay.get(date) ?? { workouts: 0, minutes: 0, km: 0 }
+      day.workouts += 1
+      if (mapping.duration >= 0)
+        day.minutes += durationToMinutes(row[mapping.duration] ?? "")
+      if (mapping.distance >= 0) {
+        const km = Number(
+          String(row[mapping.distance] ?? "").replace(",", ".").replace(/[^0-9.]/g, "")
+        )
+        if (Number.isFinite(km)) day.km += km
+      }
+      byDay.set(date, day)
+    }
+
+    const records = Array.from(byDay.entries()).flatMap(([date, day]) => {
+      const rows_: {
+        user_id: string
+        provider: string
+        metric: string
+        date: string
+        value: number
+      }[] = [{ user_id: user.id, provider: "garmin", metric: "workouts", date, value: day.workouts }]
+      if (day.minutes > 0)
+        rows_.push({ user_id: user.id, provider: "garmin", metric: "active_minutes", date, value: day.minutes })
+      if (day.km > 0)
+        rows_.push({ user_id: user.id, provider: "garmin", metric: "distance", date, value: Math.round(day.km * 100) / 100 })
+      return rows_
+    })
+
+    for (let i = 0; i < records.length; i += 200) {
+      const { error: insertError } = await supabase
+        .from("imported_metrics")
+        .upsert(records.slice(i, i + 200), {
+          onConflict: "user_id,provider,metric,date",
+        })
+      if (insertError) {
+        setBusy(false)
+        setError(insertError.message)
+        return
+      }
+    }
+    // Mark Garmin as connected so the card + sync state reflect it.
+    await supabase.from("integrations").upsert(
+      {
+        user_id: user.id,
+        provider: "garmin",
+        status: "connected",
+        last_sync_at: new Date().toISOString(),
+      },
+      { onConflict: "user_id,provider" }
+    )
+    setBusy(false)
+    setDone(byDay.size)
+    router.refresh()
+  }
+
+  async function importMoney() {
     setBusy(true)
     setError(null)
     const supabase = createClient()
@@ -340,25 +447,30 @@ function CsvDialog({ workspaceId }: { workspaceId: string }) {
     router.refresh()
   }
 
-  const fields = ["date", "amount", "type", "category", "note"] as const
-  const labels: Record<(typeof fields)[number], string> = {
+  const moneyFields = ["date", "amount", "type", "category", "note"] as const
+  const fitnessFields = ["date", "duration", "distance"] as const
+  const fields = kind === "money" ? moneyFields : fitnessFields
+  const labels: Record<string, string> = {
     date: d.connect.colDate,
     amount: d.connect.colAmount,
     type: d.connect.colType,
     category: d.connect.colCategory,
     note: d.connect.colNote,
+    duration: d.connect.colDuration,
+    distance: d.connect.colDistance,
   }
+  const cta = kind === "money" ? d.connect.importCta : d.connect.importActivities
 
   return (
     <Dialog open={open} onOpenChange={setOpen}>
       <DialogTrigger asChild>
         <Button variant="outline" size="sm" className="h-9">
-          {d.connect.importCta}
+          {cta}
         </Button>
       </DialogTrigger>
       <DialogContent className="max-h-[85dvh] overflow-y-auto">
         <DialogHeader>
-          <DialogTitle className="text-ink">{d.connect.importCta}</DialogTitle>
+          <DialogTitle className="text-ink">{cta}</DialogTitle>
         </DialogHeader>
         <div className="space-y-4">
           <div className="space-y-2">
@@ -392,11 +504,19 @@ function CsvDialog({ workspaceId }: { workspaceId: string }) {
                   </select>
                 </div>
               ))}
-              <p className="text-xs text-muted-foreground">{d.connect.typeHint}</p>
+              {kind === "money" && (
+                <p className="text-xs text-muted-foreground">
+                  {d.connect.typeHint}
+                </p>
+              )}
               <Button
                 className="h-11 w-full"
-                disabled={busy || mapping.date < 0 || mapping.amount < 0}
-                onClick={importRows}
+                disabled={
+                  busy ||
+                  mapping.date < 0 ||
+                  (kind === "money" && mapping.amount < 0)
+                }
+                onClick={kind === "money" ? importMoney : importFitness}
               >
                 {busy
                   ? d.common.saving
