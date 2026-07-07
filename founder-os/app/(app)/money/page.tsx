@@ -72,7 +72,7 @@ export default async function MoneyPage() {
   const wasteLimit = profile?.waste_limit_month ?? null
   const moneyConnected = (integrations ?? []).some(
     (i) =>
-      ["stripe", "lemonsqueezy"].includes(i.provider) &&
+      ["csv", "stripe", "lemonsqueezy"].includes(i.provider) &&
       i.status !== "disconnected"
   )
 

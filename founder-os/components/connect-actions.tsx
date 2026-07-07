@@ -317,6 +317,7 @@ export function CsvDialog({
   const [mapping, setMapping] = useState<Record<string, number>>({})
   const [busy, setBusy] = useState(false)
   const [done, setDone] = useState<number | null>(null)
+  const [skippedCount, setSkipped] = useState(0)
   const [error, setError] = useState<string | null>(null)
 
   function onFile(event: React.ChangeEvent<HTMLInputElement>) {
@@ -469,19 +470,59 @@ export function CsvDialog({
       })
       .filter((r): r is NonNullable<typeof r> => r !== null)
 
+    // Bank statements get re-exported with overlap — dedupe against what
+    // is already stored (same date + direction + amount + note), so the
+    // same file can be imported twice without doubling the books.
+    let fresh = records
+    let skipped = 0
+    if (records.length > 0) {
+      const dates = records.map((r) => r.date).sort()
+      const { data: existing } = await supabase
+        .from("transactions")
+        .select("date,type,amount,note")
+        .gte("date", dates[0])
+        .lte("date", dates[dates.length - 1])
+      const seen = new Set(
+        (existing ?? []).map(
+          (t) => `${t.date}|${t.type}|${t.amount}|${t.note ?? ""}`
+        )
+      )
+      fresh = records.filter((r) => {
+        const key = `${r.date}|${r.type}|${r.amount}|${r.note ?? ""}`
+        if (seen.has(key)) {
+          skipped++
+          return false
+        }
+        seen.add(key) // also dedupe within the file itself
+        return true
+      })
+    }
+
     // Batch in chunks of 200 to stay well under payload limits.
-    for (let i = 0; i < records.length; i += 200) {
+    for (let i = 0; i < fresh.length; i += 200) {
       const { error: insertError } = await supabase
         .from("transactions")
-        .insert(records.slice(i, i + 200))
+        .insert(fresh.slice(i, i + 200))
       if (insertError) {
         setBusy(false)
         setError(insertError.message)
         return
       }
     }
+    // The statement import IS the money source — mark it connected so
+    // the in-section row disappears (it stays available on Connect).
+    await supabase.from("integrations").upsert(
+      {
+        user_id: user.id,
+        provider: "csv",
+        status: "connected",
+        last_sync_at: new Date().toISOString(),
+      },
+      { onConflict: "user_id,provider" }
+    )
     setBusy(false)
-    setDone(records.length)
+    setDone(fresh.length)
+    setSkipped(skipped)
     router.refresh()
   }
 
@@ -566,6 +607,8 @@ export function CsvDialog({
           {done !== null && (
             <p className="text-sm font-medium text-ok" role="status">
               {d.connect.importedMsg}: {done} {d.connect.rowsWord}
+              {skippedCount > 0 &&
+                ` · ${skippedCount} ${d.connect.dupSkipped}`}
             </p>
           )}
           {error && <p className="text-sm text-danger">{error}</p>}
