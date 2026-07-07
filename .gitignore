@@ -32,6 +32,8 @@ node_modules/
 # Build output
 dist/
 build/
+# Nexa app route — not a build output
+!founder-os/app/**/build/
 .next/
 .nuxt/
 .output/

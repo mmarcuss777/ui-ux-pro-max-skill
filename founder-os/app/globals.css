@@ -1,0 +1,213 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  :root {
+    /* Nexa theme: warm white + gold, Apple-light. Custom tokens (ink/paper/
+       line/gold/ok/danger) live in tailwind.config.ts. */
+    --background: 45 40% 98.5%;
+    --foreground: 40 20% 10%;
+    --card: 0 0% 100%;
+    --card-foreground: 40 20% 10%;
+    --popover: 0 0% 100%;
+    --popover-foreground: 40 20% 10%;
+    --primary: 43 62% 45%;
+    --primary-foreground: 45 60% 98%;
+    --secondary: 43 22% 94.5%;
+    --secondary-foreground: 40 20% 14%;
+    --muted: 43 22% 94.5%;
+    --muted-foreground: 40 8% 42%;
+    --accent: 43 30% 91%;
+    --accent-foreground: 40 20% 12%;
+    --destructive: 0 62% 42%;
+    --destructive-foreground: 0 0% 100%;
+    --border: 42 20% 89%;
+    --input: 42 16% 82%;
+    --ring: 43 62% 45%;
+    --radius: 1rem;
+  }
+}
+
+@layer base {
+  * {
+    @apply border-border;
+  }
+  html {
+    -webkit-tap-highlight-color: transparent;
+    scroll-behavior: smooth;
+    overflow-x: hidden;
+  }
+  body {
+    @apply text-foreground antialiased;
+    overflow-x: hidden;
+    overscroll-behavior-x: none;
+    background-color: #fcfbf7;
+    background-image: linear-gradient(
+      180deg,
+      rgba(212, 175, 55, 0.06),
+      rgba(212, 175, 55, 0) 26rem
+    );
+    background-repeat: no-repeat;
+    font-feature-settings: "cv02", "cv03", "cv04", "cv11";
+    text-rendering: optimizeLegibility;
+    min-height: 100dvh;
+  }
+  h1,
+  h2,
+  h3 {
+    @apply tracking-tight;
+  }
+  h1 {
+    letter-spacing: -0.03em;
+  }
+  ::selection {
+    background: rgba(212, 175, 55, 0.3);
+    color: #1c1710;
+  }
+  input,
+  textarea,
+  select,
+  button {
+    font-size: inherit;
+  }
+  /* Kill the mobile double-tap-to-zoom delay on everything tappable —
+     taps land instantly, the page never zooms because of a fast tap. */
+  a,
+  button,
+  input,
+  select,
+  textarea,
+  label,
+  summary,
+  [role="button"],
+  [role="radio"],
+  [role="tab"] {
+    touch-action: manipulation;
+  }
+}
+
+@layer utilities {
+  /* Signature gold gradient — text */
+  .gold-text {
+    @apply bg-gradient-to-r from-gold via-gold-dark to-gold bg-clip-text text-transparent;
+  }
+  /* Signature gold — used only for SELECTED / active states now (chips,
+     toggles, active nav), never for primary buttons. Rests on the rich
+     part of the gradient (not the pale corner) with near-black text so a
+     selected control reads as clearly filled, not washed-out. The sheen
+     only shifts on touch/hover, so it costs nothing while the screen is
+     still. */
+  .gold-fill {
+    @apply border-0 bg-gradient-to-br from-[#E5BE3E] via-gold to-gold-dark text-[#231B06];
+    background-size: 150% 150%;
+    background-position: 25% 25%;
+    transition: background-position 0.5s cubic-bezier(0.22, 1, 0.36, 1);
+  }
+  @media (hover: hover) {
+    .gold-fill:hover {
+      background-position: 70% 70%;
+    }
+  }
+  .gold-fill:active {
+    background-position: 100% 100%;
+  }
+  /* Frosted chrome — header, bottom dock. A lighter blur radius than a
+     typical glass panel: iOS Safari repaints this on every scroll frame
+     since it's sticky/fixed, so cheaper blur keeps scrolling smooth. */
+  .glass {
+    @apply border-black/[0.06] bg-white/80 backdrop-blur-md backdrop-saturate-150;
+  }
+  /* Reward micro-animations — fired once on a completed action, never
+     looping, so they read as a payoff instead of noise. */
+  .animate-pop {
+    animation: nexa-pop 0.4s cubic-bezier(0.22, 1, 0.36, 1);
+  }
+  .animate-glow {
+    animation: nexa-glow 0.7s ease-out;
+  }
+  /* Every page enters with the same quick rise-and-fade (mounted from
+     template.tsx on each navigation). Transform + opacity only. */
+  .animate-page {
+    animation: nexa-page 0.24s cubic-bezier(0.22, 1, 0.36, 1) both;
+  }
+  /* Tab/panel content swap — subtler and faster than a page. */
+  .animate-tab {
+    animation: nexa-tab 0.16s ease-out both;
+  }
+  /* One shared press affordance for anything tappable that isn't a
+     Button. Use this on new interactive elements — smoothness stays
+     consistent by default. */
+  .pressable {
+    @apply transition-transform duration-150 ease-spring active:scale-[0.97];
+  }
+  /* Card material: white porcelain, hairline border, soft diffuse shadow.
+     Lifts gently under a pointer. */
+  .surface {
+    @apply rounded-2xl border border-black/[0.05] bg-card shadow-card;
+    transition:
+      transform 0.3s cubic-bezier(0.22, 1, 0.36, 1),
+      box-shadow 0.3s cubic-bezier(0.22, 1, 0.36, 1);
+  }
+  @media (hover: hover) {
+    .surface:hover {
+      transform: translateY(-2px);
+      box-shadow:
+        0 2px 4px rgba(28, 23, 12, 0.05),
+        0 20px 44px -16px rgba(28, 23, 12, 0.16);
+    }
+  }
+}
+
+@keyframes nexa-pop {
+  0% {
+    transform: scale(0.6);
+  }
+  55% {
+    transform: scale(1.15);
+  }
+  100% {
+    transform: scale(1);
+  }
+}
+@keyframes nexa-glow {
+  0% {
+    box-shadow: 0 0 0 0 rgba(201, 162, 39, 0.45);
+  }
+  100% {
+    box-shadow: 0 0 0 16px rgba(201, 162, 39, 0);
+  }
+}
+@keyframes nexa-page {
+  from {
+    opacity: 0;
+    transform: translateY(6px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+@keyframes nexa-tab {
+  from {
+    opacity: 0;
+    transform: translateY(3px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+/* Accessibility + guaranteed calm: users who ask for reduced motion get
+   an instant UI — every animation and transition collapses to a frame. */
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
+}
