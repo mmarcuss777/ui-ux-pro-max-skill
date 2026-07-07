@@ -1,6 +1,8 @@
 import { createServerClient } from "@supabase/ssr"
 import { NextResponse, type NextRequest } from "next/server"
 
+import { AUTH_COOKIE_OPTIONS } from "@/lib/supabase/cookie-options"
+
 const PUBLIC_PATHS = ["/login", "/signup"]
 
 // Fast path: if the session cookie holds a token that is still comfortably
@@ -54,6 +56,7 @@ export async function middleware(request: NextRequest) {
     process.env.NEXT_PUBLIC_SUPABASE_URL!,
     process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
     {
+      cookieOptions: AUTH_COOKIE_OPTIONS,
       cookies: {
         getAll() {
           return request.cookies.getAll()
@@ -94,7 +97,9 @@ export async function middleware(request: NextRequest) {
 }
 
 export const config = {
+  // manifest.json and sw.js must stay reachable without auth — a redirect
+  // to /login here breaks PWA installation and service-worker updates.
   matcher: [
-    "/((?!_next/static|_next/image|favicon.ico|.*\\.(?:svg|png|jpg|jpeg|gif|webp|ico)$).*)",
+    "/((?!_next/static|_next/image|favicon.ico|manifest.json|sw.js|.*\\.(?:svg|png|jpg|jpeg|gif|webp|ico)$).*)",
   ],
 }

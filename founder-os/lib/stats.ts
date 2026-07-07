@@ -1,6 +1,6 @@
 import { daysAgo, isoDate, today } from "@/lib/dates"
 import type { CloseDayData, MissionData, Pillar } from "@/lib/log-schema"
-import type { Log, Transaction } from "@/types/db"
+import type { Log } from "@/types/db"
 
 // All scores in Nexa are computed in plain code — AI never runs for these.
 
@@ -21,10 +21,16 @@ export const ACTION_LOG_TYPES = [
   "close_day",
 ]
 
+// Minimal row shapes: streak/evidence math only needs dates and types, so
+// pages can fetch slim `select("date,type")` payloads instead of full rows
+// (a month of jsonb data was the heaviest part of the dashboard load).
+type DatedRow = { date: string }
+type TypedRow = { date: string; type: string }
+
 // Evidence: what today's raw data already proves, mission aside.
 export function pillarEvidence(
   logs: Log[],
-  transactions: Transaction[]
+  transactions: DatedRow[]
 ): Record<Pillar, boolean> {
   const todayDate = today()
   const todays = logs.filter((l) => l.date === todayDate)
@@ -64,8 +70,8 @@ export function dailyScore(complete: Record<Pillar, boolean>): number {
 
 // Every date on which the user actually did something (log or money).
 export function actionDates(
-  logs: Log[],
-  transactions: Transaction[]
+  logs: TypedRow[],
+  transactions: DatedRow[]
 ): Set<string> {
   const dates = new Set<string>()
   for (const log of logs)
@@ -76,8 +82,8 @@ export function actionDates(
 
 // "Not started yet" state: true once the first real action lands today.
 export function dayStarted(
-  logs: Log[],
-  transactions: Transaction[]
+  logs: TypedRow[],
+  transactions: DatedRow[]
 ): boolean {
   return actionDates(logs, transactions).has(today())
 }
@@ -110,8 +116,8 @@ export function weekGrid(dates: Set<string>): { date: string; active: boolean }[
 
 // Distinct days in the last 7 on which a given pillar was active.
 export function weekPillarDays(
-  logs: Log[],
-  transactions: Transaction[],
+  logs: TypedRow[],
+  transactions: DatedRow[],
   pillar: Pillar
 ): number {
   const weekAgo = daysAgo(6)

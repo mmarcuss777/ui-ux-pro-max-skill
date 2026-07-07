@@ -28,6 +28,9 @@ export const viewport: Viewport = {
   width: "device-width",
   initialScale: 1,
   viewportFit: "cover",
+  // On-screen keyboard resizes the layout instead of floating over it,
+  // so the fixed dock never hovers mid-screen while typing (Android).
+  interactiveWidget: "resizes-content",
 }
 
 export default function RootLayout({

@@ -1,12 +1,16 @@
 import Link from "next/link"
-import { LightningBoltIcon, TargetIcon } from "@radix-ui/react-icons"
+import {
+  BarChartIcon,
+  LightningBoltIcon,
+  RocketIcon,
+  TargetIcon,
+} from "@radix-ui/react-icons"
 
 import { CloseDayCard } from "@/components/close-day-card"
 import { CurrentBuildCard } from "@/components/current-build-card"
 import { MissionPanel } from "@/components/mission-panel"
 import { OneMoveCard } from "@/components/one-move-card"
 import { ScoreRing } from "@/components/score-ring"
-import { Button } from "@/components/ui/button"
 import { Card, CardContent } from "@/components/ui/card"
 import { daysAgo, today } from "@/lib/dates"
 import { getT } from "@/lib/i18n-server"
@@ -29,7 +33,7 @@ import {
 import { createClient } from "@/lib/supabase/server"
 import { getWorkspaces, resolveActiveWorkspace } from "@/lib/workspace"
 import { cn } from "@/lib/utils"
-import type { Log, Transaction } from "@/types/db"
+import type { Log } from "@/types/db"
 
 const PILLAR_KEYS: Pillar[] = ["body", "mind", "build", "money"]
 
@@ -42,23 +46,40 @@ export default async function TodayPage() {
   // A month of history feeds the streak; today's slice feeds the score.
   const monthAgo = daysAgo(29)
 
-  const [{ data: logs }, { data: transactions }, { data: builds }] =
-    await Promise.all([
-      supabase.from("logs").select("*").gte("date", monthAgo),
-      supabase.from("transactions").select("*").gte("date", monthAgo),
-      supabase
-        .from("builds")
-        .select("*")
-        .eq("workspace_id", active.id)
-        .eq("status", "active")
-        .order("created_at", { ascending: false })
-        .limit(1),
-    ])
+  // Slim payloads: today's rows in full (the score needs their data), a
+  // month of bare date+type pairs for the streak, and only the last week
+  // of close/reset rows (suggestion + week focus). Fetching a month of
+  // full jsonb rows was the heaviest part of this page.
+  const [
+    { data: todayRows },
+    { data: monthMeta },
+    { data: recentSpecial },
+    { data: transactions },
+    { data: builds },
+  ] = await Promise.all([
+    supabase.from("logs").select("*").eq("date", todayDate),
+    supabase.from("logs").select("date,type").gte("date", monthAgo),
+    supabase
+      .from("logs")
+      .select("*")
+      .in("type", ["close_day", "weekly_reset"])
+      .gte("date", daysAgo(8))
+      .order("date", { ascending: false }),
+    supabase.from("transactions").select("date").gte("date", monthAgo),
+    supabase
+      .from("builds")
+      .select("*")
+      .eq("workspace_id", active.id)
+      .eq("status", "active")
+      .order("created_at", { ascending: false })
+      .limit(1),
+  ])
 
-  const recentLogs: Log[] = logs ?? []
-  const recentTx: Transaction[] = transactions ?? []
-  const todayLogs = recentLogs.filter((l) => l.date === todayDate)
-  const todayTx = recentTx.filter((t) => t.date === todayDate)
+  const todayLogs: Log[] = todayRows ?? []
+  const monthLogs = monthMeta ?? []
+  const specialLogs: Log[] = recentSpecial ?? []
+  const txDates = transactions ?? []
+  const todayTx = txDates.filter((t) => t.date === todayDate)
   const build = builds?.[0] ?? null
 
   const missionRow = todayLogs.find((l) => l.type === "mission") ?? null
@@ -69,7 +90,7 @@ export default async function TodayPage() {
   const close = closeRow ? ((closeRow.data ?? {}) as CloseDayData) : null
 
   // Last night's "tomorrow's first move" becomes this morning's suggestion.
-  const yesterdayClose = recentLogs.find(
+  const yesterdayClose = specialLogs.find(
     (l) => l.type === "close_day" && l.date === daysAgo(1)
   )
   const suggestion =
@@ -79,9 +100,7 @@ export default async function TodayPage() {
     ).trim() || null
 
   // The focus set at the last Weekly Reset follows the user all week.
-  const lastReset = recentLogs
-    .filter((l) => l.type === "weekly_reset" && l.date >= daysAgo(8))
-    .sort((a, b) => (a.date < b.date ? 1 : -1))[0]
+  const lastReset = specialLogs.find((l) => l.type === "weekly_reset")
   const weekFocus =
     ((lastReset?.data as WeeklyResetData | undefined)?.focus ?? "").trim() ||
     null
@@ -91,7 +110,7 @@ export default async function TodayPage() {
   const score = dailyScore(complete)
   const pillarsDone = Object.values(complete).filter(Boolean).length
   const started = dayStarted(todayLogs, todayTx)
-  const streakDays = streak(actionDates(recentLogs, recentTx))
+  const streakDays = streak(actionDates(monthLogs, txDates))
 
   return (
     <div className="space-y-6">
@@ -201,16 +220,23 @@ export default async function TodayPage() {
         workspaceId={active.id}
       />
 
-      <div className="flex flex-wrap gap-2">
-        <Button asChild variant="outline">
-          <Link href="/log">{d.today.addLog}</Link>
-        </Button>
-        <Button asChild variant="outline">
-          <Link href="/nexa">{d.today.askNexa}</Link>
-        </Button>
-        <Button asChild variant="outline">
-          <Link href="/review">{d.today.weeklyReview}</Link>
-        </Button>
+      {/* Visible shortcuts to everything that isn't in the dock — nothing
+          lives only behind the hamburger menu. */}
+      <div className="grid grid-cols-3 gap-2">
+        {[
+          { href: "/build", label: d.nav.build, icon: RocketIcon },
+          { href: "/money", label: d.money.title, icon: BarChartIcon },
+          { href: "/review", label: d.today.weeklyReview, icon: TargetIcon },
+        ].map(({ href, label, icon: Icon }) => (
+          <Link
+            key={href}
+            href={href}
+            className="surface flex flex-col items-center gap-1.5 px-2 py-3.5 text-center active:scale-95"
+          >
+            <Icon className="h-5 w-5 text-gold-dark" />
+            <span className="text-xs font-medium text-ink">{label}</span>
+          </Link>
+        ))}
       </div>
     </div>
   )

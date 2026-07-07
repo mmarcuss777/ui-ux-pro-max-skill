@@ -71,6 +71,20 @@
   button {
     font-size: inherit;
   }
+  /* Kill the mobile double-tap-to-zoom delay on everything tappable —
+     taps land instantly, the page never zooms because of a fast tap. */
+  a,
+  button,
+  input,
+  select,
+  textarea,
+  label,
+  summary,
+  [role="button"],
+  [role="radio"],
+  [role="tab"] {
+    touch-action: manipulation;
+  }
 }
 
 @layer utilities {
