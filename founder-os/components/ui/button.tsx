@@ -5,20 +5,22 @@ import { cva, type VariantProps } from "class-variance-authority"
 import { cn } from "@/lib/utils"
 
 const buttonVariants = cva(
-  "inline-flex items-center justify-center whitespace-nowrap rounded-full text-sm font-medium transition-all duration-200 ease-spring focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring/60 focus-visible:ring-offset-2 focus-visible:ring-offset-paper active:scale-[0.97] disabled:pointer-events-none disabled:opacity-50",
+  "inline-flex items-center justify-center whitespace-nowrap rounded-full text-sm font-medium transition-all duration-200 ease-spring focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring/60 focus-visible:ring-offset-2 focus-visible:ring-offset-paper active:scale-[0.97] disabled:pointer-events-none disabled:cursor-not-allowed",
   {
     variants: {
       variant: {
+        // Primary action: solid ink, cream text. Maximum contrast, obviously
+        // clickable. Gold is reserved for accents and selected states.
         default:
-          "gold-fill font-semibold shadow-gold-glow hover:brightness-105",
+          "bg-ink text-paper font-semibold shadow-[0_8px_20px_-8px_rgba(28,23,16,0.55)] hover:bg-ink/90 disabled:bg-line disabled:text-muted-foreground disabled:shadow-none",
         destructive:
-          "bg-destructive text-destructive-foreground shadow-sm hover:bg-destructive/90",
+          "bg-destructive text-destructive-foreground shadow-sm hover:bg-destructive/90 disabled:opacity-50",
         outline:
-          "border border-black/[0.09] bg-white shadow-sm hover:bg-secondary hover:text-accent-foreground",
+          "border border-black/[0.09] bg-white shadow-sm hover:bg-secondary hover:text-accent-foreground disabled:opacity-50",
         secondary:
-          "bg-black/[0.05] text-secondary-foreground shadow-sm hover:bg-black/[0.08]",
-        ghost: "hover:bg-accent hover:text-accent-foreground",
-        link: "text-primary underline-offset-4 hover:underline",
+          "bg-black/[0.05] text-secondary-foreground shadow-sm hover:bg-black/[0.08] disabled:opacity-50",
+        ghost: "hover:bg-accent hover:text-accent-foreground disabled:opacity-50",
+        link: "text-primary underline-offset-4 hover:underline disabled:opacity-50",
       },
       size: {
         default: "h-10 px-5 py-2",

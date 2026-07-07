@@ -6,6 +6,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { daysAgo } from "@/lib/dates"
 import { getT } from "@/lib/i18n-server"
 import type { MindData } from "@/lib/log-schema"
+import { dayWord } from "@/lib/plural"
 import { MIND_TYPES, streak, weekGrid } from "@/lib/stats"
 import { createClient } from "@/lib/supabase/server"
 import { getWorkspaces, resolveActiveWorkspace } from "@/lib/workspace"
@@ -26,7 +27,7 @@ function formatMinutes(minutes: number | null | undefined): string {
 
 export default async function MindPage() {
   const supabase = createClient()
-  const { d } = getT()
+  const { d, locale } = getT()
   const workspaces = await getWorkspaces()
   const active = resolveActiveWorkspace(workspaces)!
 
@@ -86,7 +87,7 @@ export default async function MindPage() {
                 <p className="mt-2 text-4xl font-bold tabular-nums text-ink">
                   {currentStreak}
                   <span className="ml-2 text-base font-normal text-muted-foreground">
-                    {d.common.days}
+                    {dayWord(currentStreak, locale)}
                   </span>
                 </p>
               </CardContent>

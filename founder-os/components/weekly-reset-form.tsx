@@ -14,24 +14,31 @@ import { Textarea } from "@/components/ui/textarea"
 import { weekStart } from "@/lib/dates"
 import type { WeeklyResetData } from "@/lib/log-schema"
 import { createClient } from "@/lib/supabase/client"
+import { cn } from "@/lib/utils"
 
-// Step 5 of the loop: the Weekly Reset. Five look-back questions, five
-// forward outputs. Only the focus is required — it then shows on the
-// Today page all next week, which is the reason to come back and do this.
+const TOTAL_STEPS = 4
+
+// Step 5 of the loop, broken into a short wizard so it never reads as one
+// long form: Look Back → Cut → Set Next Week → AI Verdict. The reset data
+// saves at the end of step 3; step 4 is the optional AI read. The focus set
+// here shows on the Today page all week — the reason to come back and do it.
 export function WeeklyResetForm({
   resetId,
   reset,
   workspaceId,
   buildName,
+  aiSlot,
 }: {
   resetId: string | null
   reset: WeeklyResetData | null
   workspaceId: string
   buildName: string | null
+  aiSlot: React.ReactNode
 }) {
   const router = useRouter()
   const d = useT()
-  const [editing, setEditing] = useState(reset === null)
+  const [open, setOpen] = useState(reset === null)
+  const [step, setStep] = useState(1)
   const [worked, setWorked] = useState(reset?.worked ?? "")
   const [failed, setFailed] = useState(reset?.failed ?? "")
   const [avoided, setAvoided] = useState(reset?.avoided ?? "")
@@ -46,8 +53,7 @@ export function WeeklyResetForm({
   const [saving, setSaving] = useState(false)
   const [error, setError] = useState<string | null>(null)
 
-  async function handleSubmit(event: React.FormEvent) {
-    event.preventDefault()
+  async function persist() {
     setSaving(true)
     setError(null)
 
@@ -78,7 +84,7 @@ export function WeeklyResetForm({
       } = await supabase.auth.getUser()
       if (!user) {
         router.push("/login")
-        return
+        return false
       }
       const { error } = await supabase.from("logs").insert({
         user_id: user.id,
@@ -92,13 +98,24 @@ export function WeeklyResetForm({
     setSaving(false)
     if (problem) {
       setError(problem.message ?? d.common.error)
-      return
+      return false
     }
-    setEditing(false)
     router.refresh()
+    return true
   }
 
-  if (!editing && reset !== null) {
+  async function goNext() {
+    // Focus is required and lives on step 3; save there before moving on.
+    if (step === 3) {
+      if (focus.trim() === "") return
+      const ok = await persist()
+      if (!ok) return
+    }
+    setStep((s) => Math.min(TOTAL_STEPS, s + 1))
+  }
+
+  // ---- Collapsed summary (already reset this week) -------------------------
+  if (!open && reset !== null) {
     const outputs = [
       { label: d.review.buildLabel, value: reset.build_priority },
       { label: d.review.bodyTargetLabel, value: reset.body_target },
@@ -107,59 +124,99 @@ export function WeeklyResetForm({
     ].filter((o) => (o.value ?? "").trim() !== "")
 
     return (
-      <Card className="relative overflow-hidden">
-        <div
-          aria-hidden
-          className="pointer-events-none absolute inset-x-0 top-0 h-0.5 bg-gradient-to-r from-gold-light via-gold to-transparent"
-        />
-        <CardHeader className="flex-row items-center justify-between space-y-0 pb-3">
-          <CardTitle className="flex items-center gap-2 text-base">
-            <TargetIcon className="h-4 w-4 text-gold-dark" />
-            {d.review.weekClosed}
-          </CardTitle>
-          <Button
-            variant="ghost"
-            size="sm"
-            className="h-8 text-xs"
-            onClick={() => setEditing(true)}
-          >
-            {d.common.edit}
-          </Button>
-        </CardHeader>
-        <CardContent className="space-y-3">
-          <div className="rounded-xl bg-gold/[0.08] p-3">
-            <p className="text-xs font-semibold uppercase tracking-wider text-gold-dark">
-              {d.review.weekFocus}
-            </p>
-            <p className="mt-1 text-base font-semibold text-ink">
-              {reset.focus}
-            </p>
+      <div className="space-y-4">
+        <Card className="relative overflow-hidden">
+          <div
+            aria-hidden
+            className="pointer-events-none absolute inset-x-0 top-0 h-0.5 bg-gradient-to-r from-gold-light via-gold to-transparent"
+          />
+          <CardHeader className="flex-row items-center justify-between space-y-0 pb-3">
+            <CardTitle className="flex items-center gap-2 text-base">
+              <TargetIcon className="h-4 w-4 text-gold-dark" />
+              {d.review.weekClosed}
+            </CardTitle>
+            <Button
+              variant="ghost"
+              size="sm"
+              className="h-8 text-xs"
+              onClick={() => {
+                setStep(1)
+                setOpen(true)
+              }}
+            >
+              {d.review.editReset}
+            </Button>
+          </CardHeader>
+          <CardContent className="space-y-3">
+            <div className="rounded-xl bg-gold/[0.08] p-3">
+              <p className="text-xs font-semibold uppercase tracking-wider text-gold-dark">
+                {d.review.weekFocus}
+              </p>
+              <p className="mt-1 text-base font-semibold text-ink">
+                {reset.focus}
+              </p>
+            </div>
+            {outputs.length > 0 && (
+              <dl className="space-y-1.5 text-sm">
+                {outputs.map((o) => (
+                  <div key={o.label} className="flex gap-2">
+                    <dt className="shrink-0 font-medium text-muted-foreground">
+                      {o.label}:
+                    </dt>
+                    <dd className="min-w-0 text-ink">{o.value}</dd>
+                  </div>
+                ))}
+              </dl>
+            )}
+          </CardContent>
+        </Card>
+
+        <div className="space-y-3 border-t border-line pt-5">
+          <div>
+            <p className="text-sm font-semibold text-ink">{d.review.aiTitle}</p>
+            <p className="text-xs text-muted-foreground">{d.review.aiHint}</p>
           </div>
-          {outputs.length > 0 && (
-            <dl className="space-y-1.5 text-sm">
-              {outputs.map((o) => (
-                <div key={o.label} className="flex gap-2">
-                  <dt className="shrink-0 font-medium text-muted-foreground">
-                    {o.label}:
-                  </dt>
-                  <dd className="min-w-0 text-ink">{o.value}</dd>
-                </div>
-              ))}
-            </dl>
-          )}
-        </CardContent>
-      </Card>
+          {aiSlot}
+        </div>
+      </div>
     )
+  }
+
+  // ---- Wizard --------------------------------------------------------------
+  const stepMeta: Record<number, { title: string; hint: string }> = {
+    1: { title: d.review.lookBackTitle, hint: d.review.lookBackHint },
+    2: { title: d.review.cutTitle, hint: d.review.cutHint },
+    3: { title: d.review.setWeekTitle, hint: d.review.optionalHint },
+    4: { title: d.review.verdictTitle, hint: d.review.aiHint },
   }
 
   return (
     <Card>
-      <CardContent className="p-5">
-        <form onSubmit={handleSubmit} className="space-y-5">
-          <div className="space-y-4">
-            <p className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
-              {d.review.lookBack}
+      <CardContent className="space-y-5 p-5">
+        <div className="flex items-center justify-between gap-3">
+          <div className="min-w-0">
+            <p className="text-base font-semibold text-ink">
+              {stepMeta[step].title}
             </p>
+            <p className="text-xs text-muted-foreground">
+              {stepMeta[step].hint}
+            </p>
+          </div>
+          <div className="flex shrink-0 items-center gap-1.5">
+            {Array.from({ length: TOTAL_STEPS }, (_, i) => (
+              <span
+                key={i}
+                className={cn(
+                  "h-1.5 w-5 rounded-full transition-colors",
+                  i < step ? "bg-gold" : "bg-line"
+                )}
+              />
+            ))}
+          </div>
+        </div>
+
+        {step === 1 && (
+          <div className="space-y-4">
             <div className="space-y-2">
               <Label htmlFor="reset-worked">{d.review.workedLabel}</Label>
               <Textarea
@@ -188,21 +245,24 @@ export function WeeklyResetForm({
                 onChange={(e) => setAvoided(e.target.value)}
               />
             </div>
-            <div className="space-y-2">
-              <Label htmlFor="reset-stop">{d.review.stopLabel}</Label>
-              <Input
-                id="reset-stop"
-                maxLength={200}
-                value={stop}
-                onChange={(e) => setStop(e.target.value)}
-              />
-            </div>
           </div>
+        )}
 
-          <div className="space-y-4 border-t border-line pt-4">
-            <p className="text-xs font-semibold uppercase tracking-wider text-gold-dark">
-              {d.review.setWeek}
-            </p>
+        {step === 2 && (
+          <div className="space-y-2">
+            <Label htmlFor="reset-stop">{d.review.stopLabel}</Label>
+            <Textarea
+              id="reset-stop"
+              rows={3}
+              maxLength={300}
+              value={stop}
+              onChange={(e) => setStop(e.target.value)}
+            />
+          </div>
+        )}
+
+        {step === 3 && (
+          <div className="space-y-4">
             <div className="space-y-2">
               <Label htmlFor="reset-focus">{d.review.focusLabel}</Label>
               <Input
@@ -213,9 +273,6 @@ export function WeeklyResetForm({
                 value={focus}
                 onChange={(e) => setFocus(e.target.value)}
               />
-              <p className="text-xs text-muted-foreground">
-                {d.review.optionalHint}
-              </p>
             </div>
             <div className="space-y-2">
               <Label htmlFor="reset-build">{d.review.buildLabel}</Label>
@@ -259,16 +316,52 @@ export function WeeklyResetForm({
               />
             </div>
           </div>
+        )}
 
-          {error && <p className="text-sm text-danger">{error}</p>}
-          <PrimaryCta
-            type="submit"
-            className="w-full sm:w-auto"
-            disabled={saving || focus.trim() === ""}
-          >
-            {saving ? d.review.closingWeek : d.review.closeWeek}
-          </PrimaryCta>
-        </form>
+        {step === 4 && (
+          <div className="space-y-4">
+            <div className="rounded-xl bg-gold/[0.08] p-3">
+              <p className="text-xs font-semibold uppercase tracking-wider text-gold-dark">
+                {d.review.weekFocus}
+              </p>
+              <p className="mt-1 text-base font-semibold text-ink">
+                {focus || "—"}
+              </p>
+            </div>
+            {aiSlot}
+          </div>
+        )}
+
+        {error && <p className="text-sm text-danger">{error}</p>}
+
+        <div className="flex items-center justify-between gap-3 pt-1">
+          {step > 1 ? (
+            <Button
+              variant="ghost"
+              onClick={() => setStep((s) => Math.max(1, s - 1))}
+            >
+              {d.review.back}
+            </Button>
+          ) : (
+            <span />
+          )}
+          {step < TOTAL_STEPS ? (
+            <PrimaryCta
+              onClick={goNext}
+              disabled={saving || (step === 3 && focus.trim() === "")}
+            >
+              {saving
+                ? d.review.closingWeek
+                : step === 3
+                  ? d.review.closeWeek
+                  : d.review.next}
+            </PrimaryCta>
+          ) : (
+            <Button variant="outline" onClick={() => setOpen(false)}>
+              {d.common.done}
+            </Button>
+          )}
+        </div>
       </CardContent>
     </Card>
   )

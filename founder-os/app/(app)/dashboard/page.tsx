@@ -16,6 +16,7 @@ import type {
   OneMoveData,
   WeeklyResetData,
 } from "@/lib/log-schema"
+import { daysLabel } from "@/lib/plural"
 import {
   actionDates,
   dailyScore,
@@ -107,7 +108,7 @@ export default async function TodayPage() {
         {streakDays > 0 && (
           <span className="flex items-center gap-1.5 rounded-full border border-gold/30 bg-gold/10 px-3 py-1.5 text-xs font-semibold text-gold-dark">
             <LightningBoltIcon className="h-3.5 w-3.5" />
-            {d.today.streak}: {streakDays} {d.common.days}
+            {d.today.streak}: {daysLabel(streakDays, locale)}
           </span>
         )}
       </div>

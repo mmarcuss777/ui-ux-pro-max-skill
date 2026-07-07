@@ -235,15 +235,8 @@ export default async function ReviewPage() {
         reset={reset}
         workspaceId={active.id}
         buildName={build?.name ?? null}
+        aiSlot={<ReviewGenerator summary={summary} />}
       />
-
-      <div className="space-y-3 border-t border-line pt-5">
-        <div>
-          <p className="text-sm font-semibold text-ink">{d.review.aiTitle}</p>
-          <p className="text-xs text-muted-foreground">{d.review.aiHint}</p>
-        </div>
-        <ReviewGenerator summary={summary} />
-      </div>
 
       <details className="rounded-xl border border-line p-4">
         <summary className="cursor-pointer text-sm font-medium text-ink">

@@ -38,6 +38,13 @@ export type WeeklyResetData = {
   week_start?: string
 }
 
+// type = 'body_goal' — the persistent body target + this week's target
+// (one row per workspace; the latest wins).
+export type BodyGoalData = {
+  main_goal?: string
+  week_target?: string
+}
+
 // type = 'daily' — the quick daily check-in
 export type DailyData = {
   energy?: number

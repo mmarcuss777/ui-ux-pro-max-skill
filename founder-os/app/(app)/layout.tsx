@@ -57,7 +57,10 @@ export default async function AppLayout({
         </div>
         <AppNav />
       </header>
-      <main className="mx-auto w-full max-w-5xl animate-fade-up px-4 py-6 pb-28 md:pb-8">
+      {/* Bottom padding clears the fixed mobile dock (its height + the
+          device safe-area inset) so nothing hides behind it. Desktop has
+          no dock, so it drops back to a normal gap. */}
+      <main className="mx-auto w-full max-w-5xl animate-fade-up px-4 py-6 pb-[calc(9.5rem+env(safe-area-inset-bottom))] md:pb-8">
         {children}
       </main>
       <BottomNav />

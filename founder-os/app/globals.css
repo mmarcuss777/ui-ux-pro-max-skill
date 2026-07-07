@@ -78,18 +78,21 @@
   .gold-text {
     @apply bg-gradient-to-r from-gold via-gold-dark to-gold bg-clip-text text-transparent;
   }
-  /* Signature gold gradient — fills (buttons, pills, chips). Deep-bronze
-     text for contrast; the sheen only moves in response to touch/hover,
-     never idles, so it costs nothing while the screen is still. */
+  /* Signature gold — used only for SELECTED / active states now (chips,
+     toggles, active nav), never for primary buttons. Rests on the rich
+     part of the gradient (not the pale corner) with near-black text so a
+     selected control reads as clearly filled, not washed-out. The sheen
+     only shifts on touch/hover, so it costs nothing while the screen is
+     still. */
   .gold-fill {
-    @apply border-0 bg-gradient-to-br from-gold-light via-gold to-gold-dark text-[#2A2107];
-    background-size: 160% 160%;
-    background-position: 0% 0%;
+    @apply border-0 bg-gradient-to-br from-[#E5BE3E] via-gold to-gold-dark text-[#231B06];
+    background-size: 150% 150%;
+    background-position: 25% 25%;
     transition: background-position 0.5s cubic-bezier(0.22, 1, 0.36, 1);
   }
   @media (hover: hover) {
     .gold-fill:hover {
-      background-position: 60% 60%;
+      background-position: 70% 70%;
     }
   }
   .gold-fill:active {

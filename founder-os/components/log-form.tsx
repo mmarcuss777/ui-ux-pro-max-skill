@@ -32,10 +32,13 @@ type Tab = "daily" | "body" | "mind" | "build" | "money"
 type Feedback = {
   message: string
   score: number
+  scoreGained: number
   streakDays: number
   weekDays: number | null
-  pillarsDone: number
+  complete: Record<Pillar, boolean>
 }
+
+const PILLAR_ORDER: Pillar[] = ["body", "mind", "build", "money"]
 
 const LEVELS = [1, 2, 3, 4, 5]
 
@@ -103,9 +106,13 @@ export function LogForm({ workspaceId }: { workspaceId: string }) {
   }
 
   // One fast query after the insert turns raw data into the reward:
-  // today's score, current streak, and this pillar's week count.
+  // today's score, the points this log just earned, the streak, and this
+  // pillar's week count. `justAddedId` is the row we just wrote — removing
+  // it gives the "before" score, so score gained needs no extra query.
   async function computeFeedback(
-    supabase: ReturnType<typeof createClient>
+    supabase: ReturnType<typeof createClient>,
+    justAddedLogId: string | null,
+    justAddedTxId: string | null
   ): Promise<Feedback> {
     const monthAgo = daysAgo(29)
     const [{ data: recentLogs }, { data: recentTx }] = await Promise.all([
@@ -120,11 +127,17 @@ export function LogForm({ workspaceId }: { workspaceId: string }) {
     const mission = missionRow
       ? ((missionRow.data ?? {}) as MissionData)
       : null
-    const complete = pillarComplete(
-      mission,
-      pillarEvidence(todayLogs, todayTx)
-    )
+
+    const scoreFrom = (logs: Log[], tx: Transaction[]) =>
+      dailyScore(pillarComplete(mission, pillarEvidence(logs, tx)))
+
+    const complete = pillarComplete(mission, pillarEvidence(todayLogs, todayTx))
     const score = dailyScore(complete)
+    const before = scoreFrom(
+      todayLogs.filter((l) => l.id !== justAddedLogId),
+      todayTx.filter((t) => t.id !== justAddedTxId)
+    )
+
     const pillar: Pillar | null = tab === "daily" ? null : tab
     const message =
       score === 100
@@ -135,9 +148,10 @@ export function LogForm({ workspaceId }: { workspaceId: string }) {
     return {
       message,
       score,
+      scoreGained: Math.max(0, score - before),
       streakDays: streak(actionDates(logsArr, txArr)),
       weekDays: pillar ? weekPillarDays(logsArr, txArr, pillar) : null,
-      pillarsDone: Object.values(complete).filter(Boolean).length,
+      complete,
     }
   }
 
@@ -157,21 +171,28 @@ export function LogForm({ workspaceId }: { workspaceId: string }) {
     }
 
     let problem: { message: string } | null = null
+    let newLogId: string | null = null
+    let newTxId: string | null = null
 
     if (tab === "money") {
-      const { error } = await supabase.from("transactions").insert({
-        user_id: user.id,
-        workspace_id: workspaceId,
-        type: txType,
-        amount: Number(amount),
-        category: category.trim() || null,
-        note: note.trim() || null,
-        // Discipline question — only asked when money goes out.
-        ...(txType === "out" && movedForward !== null
-          ? { moved_forward: movedForward }
-          : {}),
-      })
+      const { data: inserted, error } = await supabase
+        .from("transactions")
+        .insert({
+          user_id: user.id,
+          workspace_id: workspaceId,
+          type: txType,
+          amount: Number(amount),
+          category: category.trim() || null,
+          note: note.trim() || null,
+          // Discipline question — only asked when money goes out.
+          ...(txType === "out" && movedForward !== null
+            ? { moved_forward: movedForward }
+            : {}),
+        })
+        .select("id")
+        .single()
       problem = error
+      newTxId = inserted?.id ?? null
     } else {
       const data =
         tab === "daily"
@@ -185,13 +206,18 @@ export function LogForm({ workspaceId }: { workspaceId: string }) {
           : tab === "mind"
             ? { lesson: lesson.trim(), note: note.trim() }
             : { note: note.trim() }
-      const { error } = await supabase.from("logs").insert({
-        user_id: user.id,
-        workspace_id: workspaceId,
-        type: tab,
-        data,
-      })
+      const { data: inserted, error } = await supabase
+        .from("logs")
+        .insert({
+          user_id: user.id,
+          workspace_id: workspaceId,
+          type: tab,
+          data,
+        })
+        .select("id")
+        .single()
       problem = error
+      newLogId = inserted?.id ?? null
     }
 
     if (problem) {
@@ -200,7 +226,7 @@ export function LogForm({ workspaceId }: { workspaceId: string }) {
       return
     }
     reset()
-    setFeedback(await computeFeedback(supabase))
+    setFeedback(await computeFeedback(supabase, newLogId, newTxId))
     setSaving(false)
     router.refresh()
   }
@@ -405,10 +431,20 @@ export function LogForm({ workspaceId }: { workspaceId: string }) {
       {feedback && (
         <div
           role="status"
-          className="animate-fade-up rounded-xl border border-gold/30 bg-gold/[0.07] p-4"
+          className="animate-fade-up space-y-3 rounded-xl border border-gold/30 bg-gold/[0.07] p-4"
         >
-          <p className="text-sm font-semibold text-ink">{feedback.message}</p>
-          <div className="mt-2 flex flex-wrap gap-x-4 gap-y-1 text-xs text-muted-foreground">
+          <div className="flex items-baseline justify-between gap-3">
+            <p className="text-sm font-semibold text-ink">
+              {feedback.message}
+            </p>
+            {feedback.scoreGained > 0 && (
+              <span className="shrink-0 rounded-full bg-ok/15 px-2.5 py-1 text-xs font-bold tabular-nums text-ok">
+                +{feedback.scoreGained}
+              </span>
+            )}
+          </div>
+
+          <div className="flex flex-wrap gap-x-4 gap-y-1 text-xs text-muted-foreground">
             <span className="tabular-nums">
               <span className="font-semibold text-gold-dark">
                 {feedback.score}/100
@@ -422,21 +458,35 @@ export function LogForm({ workspaceId }: { workspaceId: string }) {
               </span>{" "}
               {d.feedback.streakLabel}
             </span>
-            {feedback.weekDays !== null ? (
+            {feedback.weekDays !== null && (
               <span className="tabular-nums">
                 <span className="font-semibold text-gold-dark">
                   {feedback.weekDays}/7
                 </span>{" "}
                 {d.feedback.weekLabel}
               </span>
-            ) : (
-              <span className="tabular-nums">
-                <span className="font-semibold text-gold-dark">
-                  {feedback.pillarsDone}/4
-                </span>{" "}
-                {d.today.pillarsOf}
-              </span>
             )}
+          </div>
+
+          <div>
+            <p className="mb-1.5 text-[11px] font-medium uppercase tracking-wider text-muted-foreground">
+              {d.feedback.pillarsComplete}
+            </p>
+            <div className="flex flex-wrap gap-1.5">
+              {PILLAR_ORDER.map((pillar) => (
+                <span
+                  key={pillar}
+                  className={cn(
+                    "rounded-full px-2.5 py-1 text-[11px] font-medium",
+                    feedback.complete[pillar]
+                      ? "gold-fill"
+                      : "bg-secondary text-muted-foreground"
+                  )}
+                >
+                  {d.pillars[pillar]}
+                </span>
+              ))}
+            </div>
           </div>
         </div>
       )}

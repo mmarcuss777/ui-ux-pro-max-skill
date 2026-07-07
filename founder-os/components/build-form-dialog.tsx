@@ -234,40 +234,48 @@ export function BuildFormDialog({
             </Select>
           </div>
 
-          <div className="space-y-3 rounded-xl border border-gold/25 bg-gold/5 p-4">
-            <p className="text-xs font-semibold uppercase tracking-wider text-gold-dark">
+          {/* The six core fields above are the whole flow. The playbook is
+              type-specific depth — folded away so the create flow stays
+              short, opened when the founder wants to go deeper. */}
+          <details className="group rounded-xl border border-gold/25 bg-gold/5 p-4">
+            <summary className="flex cursor-pointer items-center justify-between text-xs font-semibold uppercase tracking-wider text-gold-dark">
               {d.buildPage.playbook} — {d.labels[type as LabelKey] ?? type}
-            </p>
-            {typeFields.map((key) => (
-              <div key={key} className="space-y-1.5">
-                <Label htmlFor={`field-${key}`} className="text-xs">
-                  {d.buildFields[key]}
-                </Label>
-                <Input
-                  id={`field-${key}`}
-                  maxLength={200}
-                  value={fields[key] ?? ""}
-                  onChange={(e) =>
-                    setFields((f) => ({ ...f, [key]: e.target.value }))
-                  }
-                />
-              </div>
-            ))}
-            {type === "ecommerce" && Number.isFinite(margin) && (
-              <p className="text-sm">
-                {d.buildPage.margin}:{" "}
-                <span
-                  className={
-                    margin >= 0
-                      ? "font-semibold tabular-nums text-ok"
-                      : "font-semibold tabular-nums text-danger"
-                  }
-                >
-                  {margin.toFixed(2)}
-                </span>
-              </p>
-            )}
-          </div>
+              <span className="text-muted-foreground transition-transform group-open:rotate-180">
+                ⌄
+              </span>
+            </summary>
+            <div className="mt-3 space-y-3">
+              {typeFields.map((key) => (
+                <div key={key} className="space-y-1.5">
+                  <Label htmlFor={`field-${key}`} className="text-xs">
+                    {d.buildFields[key]}
+                  </Label>
+                  <Input
+                    id={`field-${key}`}
+                    maxLength={200}
+                    value={fields[key] ?? ""}
+                    onChange={(e) =>
+                      setFields((f) => ({ ...f, [key]: e.target.value }))
+                    }
+                  />
+                </div>
+              ))}
+              {type === "ecommerce" && Number.isFinite(margin) && (
+                <p className="text-sm">
+                  {d.buildPage.margin}:{" "}
+                  <span
+                    className={
+                      margin >= 0
+                        ? "font-semibold tabular-nums text-ok"
+                        : "font-semibold tabular-nums text-danger"
+                    }
+                  >
+                    {margin.toFixed(2)}
+                  </span>
+                </p>
+              )}
+            </div>
+          </details>
 
           <div className="space-y-2">
             <Label htmlFor="build-notes">{d.buildPage.notesLabel}</Label>
