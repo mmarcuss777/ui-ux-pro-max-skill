@@ -1,29 +1,38 @@
 import { ReviewGenerator } from "@/components/review-generator"
+import { ScoreRing } from "@/components/score-ring"
 import { ScoreTrend } from "@/components/score-trend"
 import { ShareWeek } from "@/components/share-week"
 import { WeeklyResetForm } from "@/components/weekly-reset-form"
 import { Card, CardContent } from "@/components/ui/card"
 import { daysAgo, isoDate, shortDate, today, weekStart } from "@/lib/dates"
 import { getT } from "@/lib/i18n-server"
-import type { MissionData, WeeklyResetData } from "@/lib/log-schema"
+import type { WeeklyResetData } from "@/lib/log-schema"
 import { formatMoney } from "@/lib/money"
+import { pulseSummary, pulseTiles } from "@/lib/pulse"
+import {
+  connectedPillars,
+  scoreBand,
+  scoreDay,
+  weekScore,
+  type DayScore,
+  type ScoreBand,
+} from "@/lib/score"
 import {
   ACTION_LOG_TYPES,
   BODY_TYPES,
   MIND_TYPES,
   actionDates,
-  dailyScore,
   metricActionDates,
   metricPillars,
-  pillarComplete,
-  pillarEvidenceFor,
   streakWithShields,
   weekPillarScore,
   type MetricSlim,
+  type Pillar,
 } from "@/lib/stats"
 import { createClient } from "@/lib/supabase/server"
 import { getWorkspaces, resolveActiveWorkspace } from "@/lib/workspace"
-import type { Build, Experiment, Log, Transaction } from "@/types/db"
+import { cn } from "@/lib/utils"
+import type { Build, Experiment, Log, Profile, Transaction } from "@/types/db"
 
 type DailyData = {
   energy?: number
@@ -41,7 +50,8 @@ function buildSummary(
   logs: Log[],
   experiments: Experiment[],
   transactions: Transaction[],
-  scores: { body: number; mind: number; buildScore: number; money: number }
+  scores: { body: number; mind: number; buildScore: number; money: number },
+  scoreBlock: string
 ): string {
   const lines: string[] = []
   lines.push(`Week: ${daysAgo(6)} to ${today()}`)
@@ -55,6 +65,8 @@ function buildSummary(
   lines.push(
     `Computed pillar activity (days of 7 → score of 10): body ${scores.body}/10, mind ${scores.mind}/10, build ${scores.buildScore}/10, money ${scores.money}/10`
   )
+  lines.push("")
+  lines.push(scoreBlock)
   lines.push("")
 
   const daily = logs.filter((l) => l.type === "daily")
@@ -129,6 +141,8 @@ export default async function ReviewPage() {
     { data: historyRows },
     { data: historyTx },
     { data: monthMetricRows },
+    { data: integrations },
+    { data: profileRows },
   ] = await Promise.all([
     supabase
       .from("logs")
@@ -170,7 +184,10 @@ export default async function ReviewPage() {
       .select("date,type,data")
       .neq("type", "screen_time")
       .gte("date", monthAgo),
-    supabase.from("transactions").select("date").gte("date", monthAgo),
+    supabase
+      .from("transactions")
+      .select("date,type,amount,category,moved_forward")
+      .gte("date", monthAgo),
     // Half a year of bare date+type pairs: identity evidence, rank and
     // perfect-week trophies live on long memory, not one month.
     supabase.from("logs").select("date,type").gte("date", halfYearAgo),
@@ -179,6 +196,8 @@ export default async function ReviewPage() {
       .from("imported_metrics")
       .select("date,metric,value")
       .gte("date", monthAgo),
+    supabase.from("integrations").select("provider,status"),
+    supabase.from("profiles").select("*").limit(1),
   ])
 
   const weekLogs: Log[] = logs ?? []
@@ -245,34 +264,67 @@ export default async function ReviewPage() {
     { label: d.pillars.money, score: scores.money, days: moneyDays },
   ]
 
-  // 30-day trend: real daily scores (evidence + mission dones per day).
+  // 30-day trend + week hero: one honest engine (Operator Score).
   const trendRows = (monthRows ?? []) as {
     date: string
     type: string
     data: unknown
   }[]
   const trendTx = monthTx ?? []
-  const trendPoints: { date: string; score: number }[] = []
+  const connected = connectedPillars(integrations ?? [])
+  const profile: Profile | null = profileRows?.[0] ?? null
+  const dayScores: { date: string; day: DayScore }[] = []
   for (let i = 29; i >= 0; i--) {
     const date = daysAgo(i)
-    const missionRow = trendRows.find(
-      (r) => r.date === date && r.type === "mission"
-    )
-    const mission = (missionRow?.data ?? null) as MissionData | null
-    const manual = pillarEvidenceFor(date, trendRows, trendTx)
-    const imported = metricPillars(monthMetrics, date)
-    trendPoints.push({
+    dayScores.push({
       date,
-      score: dailyScore(
-        pillarComplete(mission, {
-          body: manual.body || imported.body === true,
-          mind: manual.mind,
-          build: manual.build || imported.build === true,
-          money: manual.money || imported.money === true,
-        })
-      ),
+      day: scoreDay(date, trendRows, trendTx, monthMetrics, connected),
     })
   }
+  const trendPoints = dayScores.map(({ date, day }) => ({
+    date,
+    score: day.total,
+  }))
+  const lastSevenScores = dayScores.slice(-7)
+  const weekAvg = weekScore(lastSevenScores.map(({ day }) => day.total))
+  const prevWeekAvg = weekScore(
+    dayScores.slice(-14, -7).map(({ day }) => day.total)
+  )
+  const band: ScoreBand = scoreBand(weekAvg)
+  const PILLAR_KEYS: Pillar[] = ["body", "mind", "build", "money"]
+  const pillarWeekPts = PILLAR_KEYS.map((pillar) => ({
+    pillar,
+    points: Math.round(
+      lastSevenScores.reduce(
+        (sum, { day }) => sum + day.pillars[pillar].points,
+        0
+      ) / 7
+    ),
+  }))
+
+  // The block the AI verdict is anchored on: day-by-day Operator Score,
+  // live connector pulse, and the founder's own bars from the profile.
+  const wasteMonth = trendTx
+    .filter(
+      (t) =>
+        t.date >= today().slice(0, 8) + "01" &&
+        t.type === "out" &&
+        t.category === "waste"
+    )
+    .reduce((sum, t) => sum + (t.amount ?? 0), 0)
+  const scoreBlock = [
+    `Operator Score, last 7 days (0-100; 4 pillars x 25 = 15 action + 10 proof):`,
+    ...lastSevenScores.map(
+      ({ date, day }) =>
+        `- ${date}: ${day.total} (body ${day.pillars.body.points}, mind ${day.pillars.mind.points}, business ${day.pillars.build.points}, money ${day.pillars.money.points})`
+    ),
+    `Week average: ${weekAvg}/100 (previous week ${prevWeekAvg}/100). 80+ is elite.`,
+    "",
+    "Connected data, this week vs the week before:",
+    pulseSummary(pulseTiles(monthMetrics, today())),
+    "",
+    `Founder's bars: trainings ${profile?.training_per_week ?? 4}/week, focus ${profile?.focus_minutes_per_day ?? 25} min/day, monthly waste limit ${profile?.waste_limit_month != null ? formatMoney(profile.waste_limit_month) : "not set"} (waste spent this month: ${formatMoney(wasteMonth)}). Judge the week against these bars.`,
+  ].join("\n")
 
   // Identity block: long-memory numbers that survive any broken streak.
   const history = historyRows ?? []
@@ -335,8 +387,17 @@ export default async function ReviewPage() {
     weekLogs,
     experiments ?? [],
     weekTx,
-    scores
+    scores,
+    scoreBlock
   )
+
+  const bandLabel: Record<ScoreBand, string> = {
+    off: d.today.bandOff,
+    solid: d.today.bandSolid,
+    operator: d.today.bandOperator,
+    elite: d.today.bandElite,
+  }
+  const weekDelta = weekAvg - prevWeekAvg
 
   return (
     <div className="mx-auto max-w-2xl space-y-6">
@@ -345,44 +406,74 @@ export default async function ReviewPage() {
         <p className="text-sm text-muted-foreground">{d.review.subtitle}</p>
       </div>
 
-      <div>
-        <p className="mb-3 text-xs font-semibold uppercase tracking-wider text-muted-foreground">
-          {d.review.weekScores}
-        </p>
-        <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
-          {scoreCards.map((card) => (
-            <Card key={card.label} className="relative overflow-hidden">
-              <div
-                aria-hidden
-                className="pointer-events-none absolute inset-x-0 top-0 h-0.5 bg-gradient-to-r from-gold-light via-gold to-transparent"
-              />
-              <CardContent className="p-4">
-                <p className="text-xs text-muted-foreground">{card.label}</p>
-                <p className="mt-1 text-2xl font-bold tabular-nums text-ink">
-                  {card.score}
-                  <span className="text-sm font-normal text-muted-foreground">
-                    /10
+      {/* The week's verdict, in one number — the same engine as every
+          day: Operator Score averaged over the last seven days. */}
+      <div
+        className={cn(
+          "rounded-2xl bg-gradient-to-br from-gold-light via-gold/40 to-gold-dark/50 p-px shadow-lg shadow-gold/15",
+          band === "elite" && "animate-glow"
+        )}
+      >
+        <div className="rounded-[calc(1rem-1px)] bg-card p-5">
+          <p className="text-xs font-semibold uppercase tracking-wider text-gold-dark">
+            {d.review.weekScoreTitle}
+          </p>
+          <div className="mt-3 flex items-center gap-4">
+            <ScoreRing value={weekAvg} size={104} label={d.review.weekScoreTitle} />
+            <div className="min-w-0 flex-1">
+              <p
+                className={cn(
+                  "text-sm font-semibold",
+                  band === "elite" ? "text-gold-dark" : "text-ink"
+                )}
+              >
+                {bandLabel[band]}
+              </p>
+              {prevWeekAvg > 0 && weekDelta !== 0 && (
+                <p
+                  className={cn(
+                    "mt-0.5 text-xs font-medium",
+                    weekDelta > 0 ? "text-ok" : "text-danger"
+                  )}
+                >
+                  {weekDelta > 0 ? "▲" : "▼"} {Math.abs(weekDelta)}{" "}
+                  {d.review.vsPrevWeek}
+                </p>
+              )}
+              {bestDayLabel && (
+                <p className="mt-1 text-xs text-muted-foreground">
+                  {d.review.bestDay}:{" "}
+                  <span className="font-medium capitalize text-ink">
+                    {bestDayLabel}
                   </span>
                 </p>
-                <p className="text-[11px] text-muted-foreground">
-                  {card.days}/7 {d.review.daysActive}
-                </p>
-              </CardContent>
-            </Card>
-          ))}
+              )}
+            </div>
+          </div>
+          <div className="mt-3 grid grid-cols-4 gap-1.5">
+            {pillarWeekPts.map(({ pillar, points }) => (
+              <div
+                key={pillar}
+                className={cn(
+                  "rounded-xl px-2 py-2 text-center",
+                  points >= 20
+                    ? "gold-fill shadow-sm shadow-gold/25"
+                    : points > 0
+                      ? "bg-gold/15 text-gold-dark"
+                      : "bg-secondary text-muted-foreground"
+                )}
+              >
+                <span className="block text-[11px] font-medium">
+                  {d.pillars[pillar]}
+                </span>
+                <span className="block text-sm font-bold tabular-nums">
+                  {points}
+                </span>
+              </div>
+            ))}
+          </div>
         </div>
       </div>
-
-      {bestDayLabel && (
-        <p className="flex items-center gap-2 rounded-xl border border-gold/25 bg-gold/[0.07] px-3.5 py-2.5 text-sm">
-          <span className="shrink-0 font-medium text-muted-foreground">
-            {d.review.bestDay}:
-          </span>
-          <span className="min-w-0 truncate font-semibold capitalize text-ink">
-            {bestDayLabel}
-          </span>
-        </p>
-      )}
 
       <ScoreTrend points={trendPoints} />
 

@@ -4,7 +4,6 @@ import {
   BarChartIcon,
   ChatBubbleIcon,
   LightningBoltIcon,
-  RocketIcon,
   TargetIcon,
 } from "@radix-ui/react-icons"
 
@@ -62,7 +61,6 @@ export default async function TodayPage() {
     { data: monthFull },
     { data: recentSpecial },
     { data: txMonth },
-    { data: allBuilds },
     { data: metricRows },
     { data: integrations },
   ] = await Promise.all([
@@ -80,11 +78,6 @@ export default async function TodayPage() {
       .select("date,type,moved_forward")
       .gte("date", monthAgo),
     supabase
-      .from("builds")
-      .select("*")
-      .eq("status", "active")
-      .order("created_at", { ascending: false }),
-    supabase
       .from("imported_metrics")
       .select("date,metric,value")
       .gte("date", monthAgo),
@@ -98,8 +91,6 @@ export default async function TodayPage() {
   const transactions = txMonth ?? []
   const todayTx = transactions.filter((t) => t.date === todayDate)
   const metrics = metricRows ?? []
-  const build =
-    (allBuilds ?? []).find((b) => b.workspace_id === active.id) ?? null
 
   const oneMoveRow = todayLogs.find((l) => l.type === "one_move") ?? null
   const oneMove = oneMoveRow ? ((oneMoveRow.data ?? {}) as OneMoveData) : null
@@ -353,28 +344,8 @@ export default async function TodayPage() {
         insight={insight}
       />
 
-      {/* Active project one-liner + the three header destinations. */}
-      {build && (
-        <Link
-          href="/build"
-          prefetch={true}
-          className="surface flex items-center justify-between gap-3 px-4 py-3 active:scale-[0.99]"
-        >
-          <span className="flex min-w-0 items-center gap-2 text-sm">
-            <RocketIcon className="h-4 w-4 shrink-0 text-gold-dark" />
-            <span className="truncate font-semibold text-ink">
-              {build.name}
-            </span>
-            {build.next_action && (
-              <span className="hidden truncate text-muted-foreground sm:inline">
-                · {build.next_action}
-              </span>
-            )}
-          </span>
-          <ArrowRightIcon className="h-4 w-4 shrink-0 text-muted-foreground" />
-        </Link>
-      )}
-
+      {/* The three destinations that don't live in the dock — clean and
+          unmissable at the end of the page. */}
       <div className="grid grid-cols-3 gap-2">
         {[
           { href: "/nexa", label: d.today.askNexa, icon: ChatBubbleIcon },
