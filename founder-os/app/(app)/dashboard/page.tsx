@@ -2,8 +2,8 @@ import Link from "next/link"
 import {
   ArrowRightIcon,
   BarChartIcon,
+  ChatBubbleIcon,
   LightningBoltIcon,
-  RocketIcon,
   TargetIcon,
 } from "@radix-ui/react-icons"
 
@@ -343,7 +343,7 @@ export default async function TodayPage() {
           lives only behind the hamburger menu. */}
       <div className="grid grid-cols-3 gap-2">
         {[
-          { href: "/build", label: d.nav.build, icon: RocketIcon },
+          { href: "/nexa", label: d.today.askNexa, icon: ChatBubbleIcon },
           { href: "/money", label: d.money.title, icon: BarChartIcon },
           { href: "/review", label: d.today.weeklyReview, icon: TargetIcon },
         ].map(({ href, label, icon: Icon }) => (

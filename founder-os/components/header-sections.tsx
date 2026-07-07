@@ -2,21 +2,22 @@
 
 import Link from "next/link"
 import { usePathname } from "next/navigation"
-import { BarChartIcon, RocketIcon, TargetIcon } from "@radix-ui/react-icons"
+import { BarChartIcon, ChatBubbleIcon, TargetIcon } from "@radix-ui/react-icons"
 
 import { useT } from "@/components/locale-provider"
 import { cn } from "@/lib/utils"
 
-// Three quiet section icons on the right side of the header — Build,
+// Three quiet section icons on the right side of the header — Nexa,
 // Money, Review. One gold tone, no pills, no text: the logo owns the
 // left, the controls own the right, the header stays clean. Mobile only;
-// desktop has the full pill nav underneath.
+// desktop has the full pill nav underneath. (Business lives in the dock —
+// it's a daily pillar; Nexa is the occasional advisor, so it sits up here.)
 export function HeaderSections() {
   const pathname = usePathname()
   const d = useT()
 
   const links = [
-    { href: "/build", label: d.nav.build, icon: RocketIcon },
+    { href: "/nexa", label: d.nav.nexa, icon: ChatBubbleIcon },
     { href: "/money", label: d.money.title, icon: BarChartIcon },
     { href: "/review", label: d.nav.review, icon: TargetIcon },
   ]

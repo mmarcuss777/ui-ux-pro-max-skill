@@ -28,7 +28,7 @@ const en = {
     log: "Log",
     body: "Body",
     mind: "Mind",
-    build: "Build",
+    build: "Business",
     review: "Review",
     nexa: "Nexa",
     workspace: "Workspace",
@@ -126,7 +126,7 @@ const en = {
   pillars: {
     body: "Body",
     mind: "Mind",
-    build: "Build",
+    build: "Business",
     money: "Money",
   },
   today: {
@@ -232,7 +232,7 @@ const en = {
     noNext: "No next move defined.",
   },
   buildPage: {
-    title: "Build",
+    title: "Business",
     subtitle: "One main project. Push it until it's decided.",
     newBuild: "New build",
     editBuild: "Edit build",
@@ -391,7 +391,7 @@ const en = {
     dailyTab: "Daily",
     bodyTab: "Body",
     mindTab: "Mind",
-    buildTab: "Build",
+    buildTab: "Business",
   },
   lab: {
     title: "Business Lab",
@@ -658,7 +658,7 @@ const sk: typeof en = {
     log: "Denník",
     body: "Telo",
     mind: "Myseľ",
-    build: "Build",
+    build: "Biznis",
     review: "Review",
     nexa: "Nexa",
     workspace: "Workspace",
@@ -756,7 +756,7 @@ const sk: typeof en = {
   pillars: {
     body: "Telo",
     mind: "Myseľ",
-    build: "Build",
+    build: "Biznis",
     money: "Peniaze",
   },
   today: {
@@ -862,7 +862,7 @@ const sk: typeof en = {
     noNext: "Ďalší krok nie je definovaný.",
   },
   buildPage: {
-    title: "Build",
+    title: "Biznis",
     subtitle: "Jeden hlavný projekt. Tlač ho, kým nie je rozhodnutý.",
     newBuild: "Nový build",
     editBuild: "Upraviť build",
@@ -1021,7 +1021,7 @@ const sk: typeof en = {
     dailyTab: "Deň",
     bodyTab: "Telo",
     mindTab: "Myseľ",
-    buildTab: "Build",
+    buildTab: "Biznis",
   },
   lab: {
     title: "Biznis Lab",

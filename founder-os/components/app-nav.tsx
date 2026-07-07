@@ -3,11 +3,11 @@
 import Link from "next/link"
 import { usePathname } from "next/navigation"
 import {
-  ChatBubbleIcon,
   HomeIcon,
   LightningBoltIcon,
   PlusIcon,
   ReaderIcon,
+  RocketIcon,
 } from "@radix-ui/react-icons"
 
 import { useT } from "@/components/locale-provider"
@@ -23,15 +23,16 @@ const DESKTOP_LINKS = [
   { href: "/nexa", key: "nexa" },
 ] as const
 
-// Dock order: pillars around a raised gold Log button in the middle.
-// Build, Money and Reset stay one tap away via Today's cards + the menu.
+// Dock order: the four daily pillars around a raised gold Log button.
+// Business earned the dock slot (it's a pillar you work every day);
+// Nexa, Money and Review live as gold icons in the header.
 const MOBILE_LEFT = [
   { href: "/dashboard", key: "today", icon: HomeIcon },
   { href: "/body", key: "body", icon: LightningBoltIcon },
 ] as const
 const MOBILE_RIGHT = [
   { href: "/mind", key: "mind", icon: ReaderIcon },
-  { href: "/nexa", key: "nexa", icon: ChatBubbleIcon },
+  { href: "/build", key: "build", icon: RocketIcon },
 ] as const
 
 export function AppNav() {
