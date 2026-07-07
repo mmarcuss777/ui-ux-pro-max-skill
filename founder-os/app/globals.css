@@ -104,6 +104,14 @@
   .glass {
     @apply border-black/[0.06] bg-white/80 backdrop-blur-md backdrop-saturate-150;
   }
+  /* Reward micro-animations — fired once on a completed action, never
+     looping, so they read as a payoff instead of noise. */
+  .animate-pop {
+    animation: nexa-pop 0.4s cubic-bezier(0.22, 1, 0.36, 1);
+  }
+  .animate-glow {
+    animation: nexa-glow 0.7s ease-out;
+  }
   /* Card material: white porcelain, hairline border, soft diffuse shadow.
      Lifts gently under a pointer. */
   .surface {
@@ -119,5 +127,25 @@
         0 2px 4px rgba(28, 23, 12, 0.05),
         0 20px 44px -16px rgba(28, 23, 12, 0.16);
     }
+  }
+}
+
+@keyframes nexa-pop {
+  0% {
+    transform: scale(0.6);
+  }
+  55% {
+    transform: scale(1.15);
+  }
+  100% {
+    transform: scale(1);
+  }
+}
+@keyframes nexa-glow {
+  0% {
+    box-shadow: 0 0 0 0 rgba(201, 162, 39, 0.45);
+  }
+  100% {
+    box-shadow: 0 0 0 16px rgba(201, 162, 39, 0);
   }
 }

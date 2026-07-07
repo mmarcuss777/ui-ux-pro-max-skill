@@ -4,7 +4,7 @@ import { BodyGoalsCard } from "@/components/body-goals-card"
 import { WeekGrid } from "@/components/week-grid"
 import { PrimaryCta } from "@/components/primary-cta"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
-import { daysAgo } from "@/lib/dates"
+import { daysAgo, shortDate, today } from "@/lib/dates"
 import { getT } from "@/lib/i18n-server"
 import type { BodyGoalData } from "@/lib/log-schema"
 import { dayWord } from "@/lib/plural"
@@ -102,8 +102,12 @@ export default async function BodyPage() {
             <ul className="divide-y divide-line">
               {recent.map((log) => (
                 <li key={log.id} className="flex items-center gap-3 py-3">
-                  <span className="shrink-0 text-xs tabular-nums text-muted-foreground">
-                    {log.date}
+                  <span className="w-14 shrink-0 text-xs tabular-nums text-muted-foreground">
+                    {log.date === today()
+                      ? d.common.todayWord
+                      : log.date === daysAgo(1)
+                        ? d.common.yesterdayWord
+                        : shortDate(log.date, locale)}
                   </span>
                   <span className="min-w-0 truncate text-sm text-ink">
                     {(log.data as { note?: string })?.note || "—"}

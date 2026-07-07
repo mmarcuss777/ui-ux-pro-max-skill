@@ -20,6 +20,8 @@ const en = {
     notYet: "Not yet",
     edit: "Edit",
     days: "days",
+    todayWord: "Today",
+    yesterdayWord: "Yesterday",
   },
   nav: {
     today: "Today",
@@ -127,7 +129,7 @@ const en = {
     money: "Money",
   },
   today: {
-    title: "Today's Mission",
+    title: "Today",
     dailyScore: "Daily Score",
     scoreHint: "Complete your four pillars to fill the ring.",
     mission: "Today's Plan",
@@ -579,6 +581,8 @@ const sk: typeof en = {
     notYet: "Zatiaľ nie",
     edit: "Upraviť",
     days: "dní",
+    todayWord: "Dnes",
+    yesterdayWord: "Včera",
   },
   nav: {
     today: "Dnes",
@@ -686,7 +690,7 @@ const sk: typeof en = {
     money: "Peniaze",
   },
   today: {
-    title: "Dnešná misia",
+    title: "Dnes",
     dailyScore: "Denné skóre",
     scoreHint: "Splň štyri piliere a kruh sa naplní.",
     mission: "Denný plán",

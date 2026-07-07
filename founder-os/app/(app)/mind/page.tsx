@@ -3,7 +3,7 @@ import { ScreenTimeUploader } from "@/components/screen-time-uploader"
 import { WeekGrid } from "@/components/week-grid"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
-import { daysAgo } from "@/lib/dates"
+import { daysAgo, shortDate, today } from "@/lib/dates"
 import { getT } from "@/lib/i18n-server"
 import type { MindData } from "@/lib/log-schema"
 import { dayWord } from "@/lib/plural"
@@ -125,8 +125,12 @@ export default async function MindPage() {
                     return (
                       <li key={log.id} className="space-y-1 py-3">
                         <div className="flex items-center gap-3">
-                          <span className="shrink-0 text-xs tabular-nums text-muted-foreground">
-                            {log.date}
+                          <span className="w-14 shrink-0 text-xs tabular-nums text-muted-foreground">
+                            {log.date === today()
+                              ? d.common.todayWord
+                              : log.date === daysAgo(1)
+                                ? d.common.yesterdayWord
+                                : shortDate(log.date, locale)}
                           </span>
                           <span className="min-w-0 flex-1 truncate text-sm text-ink">
                             {data.lesson || data.note || "—"}

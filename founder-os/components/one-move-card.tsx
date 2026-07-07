@@ -31,6 +31,10 @@ export function OneMoveCard({
   const [text, setText] = useState(oneMove?.text ?? suggestion ?? "")
   const [saving, setSaving] = useState(false)
   const [error, setError] = useState<string | null>(null)
+  // Optimistic done state: the check flips the instant it's tapped — the
+  // network write and server refresh happen behind the celebration.
+  const [optimisticDone, setOptimisticDone] = useState<boolean | null>(null)
+  const [justWon, setJustWon] = useState(false)
 
   async function persist(data: OneMoveData) {
     const supabase = createClient()
@@ -72,20 +76,33 @@ export function OneMoveCard({
     router.refresh()
   }
 
+  const done = optimisticDone ?? oneMove?.done === true
+
   async function toggleDone() {
+    const next = !done
+    setOptimisticDone(next)
+    setJustWon(next)
     const problem = await persist({
       text: (oneMove?.text ?? "").trim(),
-      done: !(oneMove?.done ?? false),
+      done: next,
     })
-    if (!problem) router.refresh()
+    if (problem) {
+      setOptimisticDone(!next)
+      setJustWon(false)
+      return
+    }
+    router.refresh()
   }
-
-  const done = oneMove?.done === true
   const showSuggestionHint =
     editing && !hasMove && suggestion !== null && text === suggestion
 
   return (
-    <div className="rounded-2xl bg-gradient-to-br from-gold-light via-gold/40 to-gold-dark/50 p-px shadow-lg shadow-gold/15">
+    <div
+      className={cn(
+        "rounded-2xl bg-gradient-to-br from-gold-light via-gold/40 to-gold-dark/50 p-px shadow-lg shadow-gold/15",
+        justWon && done && "animate-glow"
+      )}
+    >
       <div className="rounded-[calc(1rem-1px)] bg-card p-5">
         <p className="flex items-center gap-2 text-xs font-semibold uppercase tracking-wider text-gold-dark">
           <StarFilledIcon className="h-3.5 w-3.5" />
@@ -128,19 +145,20 @@ export function OneMoveCard({
               aria-pressed={done}
               aria-label={d.today.oneMoveMark}
               className={cn(
-                "mt-0.5 flex h-10 w-10 shrink-0 items-center justify-center rounded-full border transition-all active:scale-95",
+                "mt-0.5 flex h-11 w-11 shrink-0 items-center justify-center rounded-full border-2 transition-all active:scale-95",
                 done
                   ? "gold-fill border-transparent shadow-md shadow-gold/30"
-                  : "border-gold/40 text-muted-foreground hover:border-gold"
+                  : "border-gold/70 bg-gold/[0.06] text-gold-dark hover:border-gold hover:bg-gold/10",
+                justWon && done && "animate-pop"
               )}
             >
-              <CheckIcon className="h-5 w-5" />
+              <CheckIcon className="h-5 w-5" strokeWidth={2} />
             </button>
             <div className="min-w-0 flex-1">
               <p
                 className={cn(
                   "text-xl font-bold leading-snug",
-                  done ? "text-muted-foreground" : "text-ink"
+                  done ? "text-ink/60" : "text-ink"
                 )}
               >
                 {oneMove?.text}

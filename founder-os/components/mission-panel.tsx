@@ -59,6 +59,10 @@ export function MissionPanel({
   })
   const [saving, setSaving] = useState(false)
   const [error, setError] = useState<string | null>(null)
+  // Optimistic done-state per pillar: the check flips on tap, the write
+  // and server refresh follow behind it.
+  const [optimistic, setOptimistic] = useState<Partial<Record<Pillar, boolean>>>({})
+  const [popped, setPopped] = useState<Pillar | null>(null)
 
   function buildData(done: Partial<Record<Pillar, boolean>> = {}): MissionData {
     const data: MissionData = {}
@@ -107,9 +111,20 @@ export function MissionPanel({
     router.refresh()
   }
 
+  function shownDone(pillar: Pillar): boolean {
+    return optimistic[pillar] ?? complete[pillar]
+  }
+
   async function toggle(pillar: Pillar) {
-    const current = mission?.[pillar]?.done ?? false
-    await persist(buildData({ [pillar]: !current }))
+    const next = !shownDone(pillar)
+    setOptimistic((o) => ({ ...o, [pillar]: next }))
+    setPopped(next ? pillar : null)
+    const problem = await persist(buildData({ [pillar]: next }))
+    if (problem) {
+      setOptimistic((o) => ({ ...o, [pillar]: !next }))
+      setPopped(null)
+      return
+    }
     router.refresh()
   }
 
@@ -180,7 +195,7 @@ export function MissionPanel({
         ) : (
           <ul className="divide-y divide-line">
             {PILLARS.map(({ key, icon: Icon, tint }) => {
-              const done = complete[key]
+              const done = shownDone(key)
               const text = mission?.[key]?.text
               return (
                 <li key={key} className="flex items-center gap-3 py-3">
@@ -196,12 +211,12 @@ export function MissionPanel({
                     <p className="text-xs font-medium uppercase tracking-wider text-muted-foreground">
                       {d.pillars[key]}
                     </p>
+                    {/* Done reads as a win (gold check, softened text) —
+                        not a strikethrough deletion. */}
                     <p
                       className={cn(
                         "truncate text-sm",
-                        done
-                          ? "text-muted-foreground line-through"
-                          : "text-ink"
+                        done ? "text-ink/50" : "text-ink"
                       )}
                     >
                       {text || "—"}
@@ -213,10 +228,11 @@ export function MissionPanel({
                     aria-pressed={done}
                     aria-label={`${d.pillars[key]}: ${done ? d.common.done : d.common.notYet}`}
                     className={cn(
-                      "flex h-8 w-8 shrink-0 items-center justify-center rounded-full border transition-all",
+                      "flex h-9 w-9 shrink-0 items-center justify-center rounded-full border-2 transition-all active:scale-95",
                       done
                         ? "gold-fill border-transparent shadow-md shadow-gold/25"
-                        : "border-line text-muted-foreground hover:border-gold/50"
+                        : "border-line bg-white text-muted-foreground/70 hover:border-gold/60 hover:text-gold-dark",
+                      popped === key && done && "animate-pop"
                     )}
                   >
                     <CheckIcon className="h-4 w-4" />

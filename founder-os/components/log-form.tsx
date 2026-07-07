@@ -1,6 +1,6 @@
 "use client"
 
-import { useState } from "react"
+import { useEffect, useState } from "react"
 import { useRouter } from "next/navigation"
 
 import { useT } from "@/components/locale-provider"
@@ -39,6 +39,23 @@ type Feedback = {
 }
 
 const PILLAR_ORDER: Pillar[] = ["body", "mind", "build", "money"]
+
+// Numbers that count up feel earned; numbers that appear feel reported.
+function CountUp({ value, ms = 600 }: { value: number; ms?: number }) {
+  const [shown, setShown] = useState(0)
+  useEffect(() => {
+    let raf: number
+    const t0 = performance.now()
+    const step = (t: number) => {
+      const p = Math.min(1, (t - t0) / ms)
+      setShown(Math.round(value * (1 - Math.pow(1 - p, 3))))
+      if (p < 1) raf = requestAnimationFrame(step)
+    }
+    raf = requestAnimationFrame(step)
+    return () => cancelAnimationFrame(raf)
+  }, [value, ms])
+  return <>{shown}</>
+}
 
 const LEVELS = [1, 2, 3, 4, 5]
 
@@ -438,8 +455,8 @@ export function LogForm({ workspaceId }: { workspaceId: string }) {
               {feedback.message}
             </p>
             {feedback.scoreGained > 0 && (
-              <span className="shrink-0 rounded-full bg-ok/15 px-2.5 py-1 text-xs font-bold tabular-nums text-ok">
-                +{feedback.scoreGained}
+              <span className="animate-pop shrink-0 rounded-full bg-ok/15 px-2.5 py-1 text-xs font-bold tabular-nums text-ok">
+                +<CountUp value={feedback.scoreGained} ms={450} />
               </span>
             )}
           </div>
@@ -447,7 +464,8 @@ export function LogForm({ workspaceId }: { workspaceId: string }) {
           <div className="flex flex-wrap gap-x-4 gap-y-1 text-xs text-muted-foreground">
             <span className="tabular-nums">
               <span className="font-semibold text-gold-dark">
-                {feedback.score}/100
+                <CountUp value={feedback.score} />
+                /100
               </span>{" "}
               {d.feedback.scoreLabel}
             </span>

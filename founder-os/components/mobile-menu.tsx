@@ -104,11 +104,16 @@ export function MobileMenu({
           </DropdownMenuItem>
 
           <DropdownMenuSeparator />
-          <DropdownMenuItem onSelect={() => router.push("/mind")}>
-            {d.nav.mind}
+          {/* Mind and Nexa moved into the bottom dock; the menu carries the
+              less-than-daily destinations instead. */}
+          <DropdownMenuItem onSelect={() => router.push("/build")}>
+            {d.nav.build}
           </DropdownMenuItem>
-          <DropdownMenuItem onSelect={() => router.push("/nexa")}>
-            {d.nav.nexa}
+          <DropdownMenuItem onSelect={() => router.push("/money")}>
+            {d.money.title}
+          </DropdownMenuItem>
+          <DropdownMenuItem onSelect={() => router.push("/review")}>
+            {d.nav.review}
           </DropdownMenuItem>
 
           <DropdownMenuSeparator />
