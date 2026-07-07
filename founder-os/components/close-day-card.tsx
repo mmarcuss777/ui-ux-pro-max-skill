@@ -171,7 +171,7 @@ export function CloseDayCard({
             {d.closeDay.cta}
           </Button>
         </DialogTrigger>
-        <DialogContent>
+        <DialogContent className="max-h-[85dvh] overflow-y-auto">
           <DialogHeader>
             <DialogTitle className="text-ink">{d.closeDay.title}</DialogTitle>
             <p className="text-sm text-muted-foreground">
@@ -202,7 +202,7 @@ export function CloseDayCard({
                 {d.closeDay.reopen}
               </Button>
             </DialogTrigger>
-            <DialogContent>
+            <DialogContent className="max-h-[85dvh] overflow-y-auto">
               <DialogHeader>
                 <DialogTitle className="text-ink">
                   {d.closeDay.title}

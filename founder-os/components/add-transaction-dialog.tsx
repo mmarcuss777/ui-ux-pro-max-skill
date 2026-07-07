@@ -92,7 +92,7 @@ export function AddTransactionDialog({ workspaceId }: { workspaceId: string }) {
       <DialogTrigger asChild>
         <PrimaryCta>{d.money.addTransaction}</PrimaryCta>
       </DialogTrigger>
-      <DialogContent>
+      <DialogContent className="max-h-[85dvh] overflow-y-auto">
         <DialogHeader>
           <DialogTitle className="text-ink">
             {d.money.newTransaction}

@@ -63,7 +63,7 @@ export function AddExperimentDialog({ workspaceId }: { workspaceId: string }) {
       <DialogTrigger asChild>
         <PrimaryCta>{d.lab.addExperiment}</PrimaryCta>
       </DialogTrigger>
-      <DialogContent>
+      <DialogContent className="max-h-[85dvh] overflow-y-auto">
         <DialogHeader>
           <DialogTitle className="text-ink">{d.lab.newExperiment}</DialogTitle>
         </DialogHeader>

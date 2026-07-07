@@ -135,7 +135,7 @@ export function MissionPanel({
               </Button>
             )}
           </DialogTrigger>
-          <DialogContent>
+          <DialogContent className="max-h-[85dvh] overflow-y-auto">
             <DialogHeader>
               <DialogTitle className="text-ink">
                 {d.today.setMission}
