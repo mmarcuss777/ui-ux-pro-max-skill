@@ -115,6 +115,9 @@ export function MobileMenu({
           <DropdownMenuItem onSelect={() => router.push("/review")}>
             {d.nav.review}
           </DropdownMenuItem>
+          <DropdownMenuItem onSelect={() => router.push("/connect")}>
+            {d.connect.title}
+          </DropdownMenuItem>
 
           <DropdownMenuSeparator />
           <div className="flex gap-1.5 px-2 py-1.5">

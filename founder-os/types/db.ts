@@ -243,6 +243,108 @@ export type Database = {
         }
         Relationships: []
       }
+      integrations: {
+        Row: {
+          id: string
+          user_id: string
+          provider: string
+          status: string
+          scopes: string | null
+          external_account: string | null
+          last_sync_at: string | null
+          error: string | null
+          created_at: string
+        }
+        Insert: {
+          id?: string
+          user_id: string
+          provider: string
+          status?: string
+          scopes?: string | null
+          external_account?: string | null
+          last_sync_at?: string | null
+          error?: string | null
+          created_at?: string
+        }
+        Update: {
+          id?: string
+          user_id?: string
+          provider?: string
+          status?: string
+          scopes?: string | null
+          external_account?: string | null
+          last_sync_at?: string | null
+          error?: string | null
+          created_at?: string
+        }
+        Relationships: []
+      }
+      imported_metrics: {
+        Row: {
+          id: string
+          user_id: string
+          provider: string
+          metric: string
+          date: string
+          value: number
+          meta: Json
+          created_at: string
+        }
+        Insert: {
+          id?: string
+          user_id: string
+          provider: string
+          metric: string
+          date: string
+          value?: number
+          meta?: Json
+          created_at?: string
+        }
+        Update: {
+          id?: string
+          user_id?: string
+          provider?: string
+          metric?: string
+          date?: string
+          value?: number
+          meta?: Json
+          created_at?: string
+        }
+        Relationships: []
+      }
+      sync_runs: {
+        Row: {
+          id: string
+          user_id: string
+          provider: string
+          started_at: string
+          finished_at: string | null
+          status: string
+          error: string | null
+          items: number
+        }
+        Insert: {
+          id?: string
+          user_id: string
+          provider: string
+          started_at?: string
+          finished_at?: string | null
+          status?: string
+          error?: string | null
+          items?: number
+        }
+        Update: {
+          id?: string
+          user_id?: string
+          provider?: string
+          started_at?: string
+          finished_at?: string | null
+          status?: string
+          error?: string | null
+          items?: number
+        }
+        Relationships: []
+      }
       push_subscriptions: {
         Row: {
           id: string
