@@ -18,6 +18,17 @@ import {
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs"
+import { cn } from "@/lib/utils"
+
+// Money discipline categories — stored as canonical values so the data
+// reads the same in both locales.
+export const MONEY_CATEGORIES = [
+  "business",
+  "body",
+  "learning",
+  "lifestyle",
+  "waste",
+] as const
 
 export function AddTransactionDialog({ workspaceId }: { workspaceId: string }) {
   const router = useRouter()
@@ -26,6 +37,7 @@ export function AddTransactionDialog({ workspaceId }: { workspaceId: string }) {
   const [type, setType] = useState<"in" | "out">("in")
   const [amount, setAmount] = useState("")
   const [category, setCategory] = useState("")
+  const [movedForward, setMovedForward] = useState<boolean | null>(null)
   const [date, setDate] = useState(today())
   const [note, setNote] = useState("")
   const [error, setError] = useState<string | null>(null)
@@ -53,6 +65,10 @@ export function AddTransactionDialog({ workspaceId }: { workspaceId: string }) {
       category: category.trim() || null,
       date,
       note: note.trim() || null,
+      // Only asked for money going out — that's where discipline lives.
+      ...(type === "out" && movedForward !== null
+        ? { moved_forward: movedForward }
+        : {}),
     })
 
     if (insertError) {
@@ -63,6 +79,7 @@ export function AddTransactionDialog({ workspaceId }: { workspaceId: string }) {
 
     setAmount("")
     setCategory("")
+    setMovedForward(null)
     setNote("")
     setDate(today())
     setSaving(false)
@@ -84,7 +101,11 @@ export function AddTransactionDialog({ workspaceId }: { workspaceId: string }) {
         <form onSubmit={handleSubmit} className="space-y-4">
           <Tabs
             value={type}
-            onValueChange={(value) => setType(value as "in" | "out")}
+            onValueChange={(value) => {
+              setType(value as "in" | "out")
+              setCategory("")
+              setMovedForward(null)
+            }}
           >
             <TabsList className="grid h-11 w-full grid-cols-2">
               <TabsTrigger value="in" className="h-9">
@@ -109,7 +130,39 @@ export function AddTransactionDialog({ workspaceId }: { workspaceId: string }) {
               onChange={(e) => setAmount(e.target.value)}
             />
           </div>
-          <div className="grid grid-cols-2 gap-3">
+          {type === "out" ? (
+            <div className="space-y-2">
+              <Label>{d.money.category}</Label>
+              <div className="flex flex-wrap gap-2" role="radiogroup">
+                {MONEY_CATEGORIES.map((option) => {
+                  const labels: Record<string, string> = {
+                    business: d.money.catBusiness,
+                    body: d.money.catBody,
+                    learning: d.money.catLearning,
+                    lifestyle: d.money.catLifestyle,
+                    waste: d.money.catWaste,
+                  }
+                  return (
+                    <button
+                      key={option}
+                      type="button"
+                      role="radio"
+                      aria-checked={category === option}
+                      onClick={() => setCategory(option)}
+                      className={cn(
+                        "rounded-full border px-3.5 py-2 text-xs font-medium transition-all",
+                        category === option
+                          ? "gold-fill border-transparent shadow-md shadow-gold/25"
+                          : "border-line bg-card text-muted-foreground hover:text-ink"
+                      )}
+                    >
+                      {labels[option]}
+                    </button>
+                  )
+                })}
+              </div>
+            </div>
+          ) : (
             <div className="space-y-2">
               <Label htmlFor="tx-category">{d.money.category}</Label>
               <Input
@@ -120,16 +173,42 @@ export function AddTransactionDialog({ workspaceId }: { workspaceId: string }) {
                 onChange={(e) => setCategory(e.target.value)}
               />
             </div>
+          )}
+
+          {type === "out" && (
             <div className="space-y-2">
-              <Label htmlFor="tx-date">{d.money.date}</Label>
-              <Input
-                id="tx-date"
-                type="date"
-                required
-                value={date}
-                onChange={(e) => setDate(e.target.value)}
-              />
+              <Label>{d.money.movedForward}</Label>
+              <div className="grid grid-cols-2 gap-2" role="radiogroup">
+                {([true, false] as const).map((option) => (
+                  <button
+                    key={String(option)}
+                    type="button"
+                    role="radio"
+                    aria-checked={movedForward === option}
+                    onClick={() => setMovedForward(option)}
+                    className={cn(
+                      "h-11 rounded-lg border text-sm font-medium transition-all",
+                      movedForward === option
+                        ? "gold-fill border-transparent shadow-md shadow-gold/25"
+                        : "border-line bg-card text-muted-foreground hover:text-ink"
+                    )}
+                  >
+                    {option ? d.money.yes : d.money.no}
+                  </button>
+                ))}
+              </div>
             </div>
+          )}
+
+          <div className="space-y-2">
+            <Label htmlFor="tx-date">{d.money.date}</Label>
+            <Input
+              id="tx-date"
+              type="date"
+              required
+              value={date}
+              onChange={(e) => setDate(e.target.value)}
+            />
           </div>
           <div className="space-y-2">
             <Label htmlFor="tx-note">{d.money.note}</Label>

@@ -87,6 +87,7 @@ export function LogForm({ workspaceId }: { workspaceId: string }) {
   const [amount, setAmount] = useState("")
   const [txType, setTxType] = useState<"in" | "out">("out")
   const [category, setCategory] = useState("")
+  const [movedForward, setMovedForward] = useState<boolean | null>(null)
   const [saving, setSaving] = useState(false)
   const [feedback, setFeedback] = useState<Feedback | null>(null)
   const [error, setError] = useState<string | null>(null)
@@ -98,6 +99,7 @@ export function LogForm({ workspaceId }: { workspaceId: string }) {
     setNote("")
     setAmount("")
     setCategory("")
+    setMovedForward(null)
   }
 
   // One fast query after the insert turns raw data into the reward:
@@ -164,6 +166,10 @@ export function LogForm({ workspaceId }: { workspaceId: string }) {
         amount: Number(amount),
         category: category.trim() || null,
         note: note.trim() || null,
+        // Discipline question — only asked when money goes out.
+        ...(txType === "out" && movedForward !== null
+          ? { moved_forward: movedForward }
+          : {}),
       })
       problem = error
     } else {
@@ -280,7 +286,11 @@ export function LogForm({ workspaceId }: { workspaceId: string }) {
                 type="button"
                 role="radio"
                 aria-checked={txType === option}
-                onClick={() => setTxType(option)}
+                onClick={() => {
+                  setTxType(option)
+                  setCategory("")
+                  setMovedForward(null)
+                }}
                 className={cn(
                   "h-11 rounded-lg border text-sm font-medium transition-all",
                   txType === option
@@ -292,21 +302,52 @@ export function LogForm({ workspaceId }: { workspaceId: string }) {
               </button>
             ))}
           </div>
-          <div className="grid grid-cols-2 gap-3">
+          <div className="space-y-2">
+            <Label htmlFor="log-amount">{d.money.amount}</Label>
+            <Input
+              id="log-amount"
+              type="number"
+              inputMode="decimal"
+              required
+              min="0.01"
+              step="0.01"
+              placeholder="0.00"
+              value={amount}
+              onChange={(e) => setAmount(e.target.value)}
+            />
+          </div>
+          {txType === "out" ? (
             <div className="space-y-2">
-              <Label htmlFor="log-amount">{d.money.amount}</Label>
-              <Input
-                id="log-amount"
-                type="number"
-                inputMode="decimal"
-                required
-                min="0.01"
-                step="0.01"
-                placeholder="0.00"
-                value={amount}
-                onChange={(e) => setAmount(e.target.value)}
-              />
+              <Label>{d.money.category}</Label>
+              <div className="flex flex-wrap gap-2" role="radiogroup">
+                {(
+                  [
+                    ["business", d.money.catBusiness],
+                    ["body", d.money.catBody],
+                    ["learning", d.money.catLearning],
+                    ["lifestyle", d.money.catLifestyle],
+                    ["waste", d.money.catWaste],
+                  ] as const
+                ).map(([option, optionLabel]) => (
+                  <button
+                    key={option}
+                    type="button"
+                    role="radio"
+                    aria-checked={category === option}
+                    onClick={() => setCategory(option)}
+                    className={cn(
+                      "rounded-full border px-3.5 py-2 text-xs font-medium transition-all",
+                      category === option
+                        ? "gold-fill border-transparent shadow-md shadow-gold/25"
+                        : "border-line bg-card text-muted-foreground hover:text-ink"
+                    )}
+                  >
+                    {optionLabel}
+                  </button>
+                ))}
+              </div>
             </div>
+          ) : (
             <div className="space-y-2">
               <Label htmlFor="log-category">{d.money.category}</Label>
               <Input
@@ -317,7 +358,31 @@ export function LogForm({ workspaceId }: { workspaceId: string }) {
                 onChange={(e) => setCategory(e.target.value)}
               />
             </div>
-          </div>
+          )}
+          {txType === "out" && (
+            <div className="space-y-2">
+              <Label>{d.money.movedForward}</Label>
+              <div className="grid grid-cols-2 gap-2" role="radiogroup">
+                {([true, false] as const).map((option) => (
+                  <button
+                    key={String(option)}
+                    type="button"
+                    role="radio"
+                    aria-checked={movedForward === option}
+                    onClick={() => setMovedForward(option)}
+                    className={cn(
+                      "h-11 rounded-lg border text-sm font-medium transition-all",
+                      movedForward === option
+                        ? "gold-fill border-transparent shadow-md shadow-gold/25"
+                        : "border-line bg-card text-muted-foreground hover:text-ink"
+                    )}
+                  >
+                    {option ? d.money.yes : d.money.no}
+                  </button>
+                ))}
+              </div>
+            </div>
+          )}
         </>
       )}
 

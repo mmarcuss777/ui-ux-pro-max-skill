@@ -89,6 +89,7 @@ export type Database = {
           status: string
           hypothesis: string
           metric: string | null
+          test_method: string | null
           deadline: string | null
           result: string | null
           decision: string | null
@@ -100,6 +101,7 @@ export type Database = {
           status?: string
           hypothesis: string
           metric?: string | null
+          test_method?: string | null
           deadline?: string | null
           result?: string | null
           decision?: string | null
@@ -111,6 +113,7 @@ export type Database = {
           status?: string
           hypothesis?: string
           metric?: string | null
+          test_method?: string | null
           deadline?: string | null
           result?: string | null
           decision?: string | null
@@ -128,6 +131,9 @@ export type Database = {
           price: number | null
           margin: number | null
           status: string
+          audience: string | null
+          problem: string | null
+          why_buy: string | null
           created_at: string
         }
         Insert: {
@@ -139,6 +145,9 @@ export type Database = {
           cost?: number | null
           price?: number | null
           status?: string
+          audience?: string | null
+          problem?: string | null
+          why_buy?: string | null
           created_at?: string
         }
         Update: {
@@ -149,6 +158,9 @@ export type Database = {
           cost?: number | null
           price?: number | null
           status?: string
+          audience?: string | null
+          problem?: string | null
+          why_buy?: string | null
           created_at?: string
         }
         Relationships: []
@@ -241,6 +253,7 @@ export type Database = {
           category: string | null
           date: string
           note: string | null
+          moved_forward: boolean | null
           created_at: string
         }
         Insert: {
@@ -252,6 +265,7 @@ export type Database = {
           category?: string | null
           date?: string
           note?: string | null
+          moved_forward?: boolean | null
           created_at?: string
         }
         Update: {
@@ -263,6 +277,7 @@ export type Database = {
           category?: string | null
           date?: string
           note?: string | null
+          moved_forward?: boolean | null
           created_at?: string
         }
         Relationships: []

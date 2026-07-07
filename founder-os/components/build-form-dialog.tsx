@@ -207,11 +207,15 @@ export function BuildFormDialog({
             <Label htmlFor="build-next">{d.buildPage.nextActionLabel}</Label>
             <Input
               id="build-next"
+              required
               maxLength={200}
               placeholder={d.buildPage.nextActionPlaceholder}
               value={nextAction}
               onChange={(e) => setNextAction(e.target.value)}
             />
+            <p className="text-xs text-muted-foreground">
+              {d.buildPage.nextRequired}
+            </p>
           </div>
 
           <div className="space-y-2">

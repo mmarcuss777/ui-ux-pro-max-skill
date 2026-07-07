@@ -23,6 +23,7 @@ export function AddExperimentDialog({ workspaceId }: { workspaceId: string }) {
   const d = useT()
   const [open, setOpen] = useState(false)
   const [hypothesis, setHypothesis] = useState("")
+  const [testMethod, setTestMethod] = useState("")
   const [metric, setMetric] = useState("")
   const [deadline, setDeadline] = useState("")
   const [error, setError] = useState<string | null>(null)
@@ -37,6 +38,7 @@ export function AddExperimentDialog({ workspaceId }: { workspaceId: string }) {
     const { error: insertError } = await supabase.from("experiments").insert({
       workspace_id: workspaceId,
       hypothesis: hypothesis.trim(),
+      test_method: testMethod.trim() || null,
       metric: metric.trim() || null,
       deadline: deadline || null,
     })
@@ -48,6 +50,7 @@ export function AddExperimentDialog({ workspaceId }: { workspaceId: string }) {
     }
 
     setHypothesis("")
+    setTestMethod("")
     setMetric("")
     setDeadline("")
     setSaving(false)
@@ -74,6 +77,16 @@ export function AddExperimentDialog({ workspaceId }: { workspaceId: string }) {
               placeholder={d.lab.hypothesisPlaceholder}
               value={hypothesis}
               onChange={(e) => setHypothesis(e.target.value)}
+            />
+          </div>
+          <div className="space-y-2">
+            <Label htmlFor="test-method">{d.lab.testMethod}</Label>
+            <Input
+              id="test-method"
+              maxLength={200}
+              placeholder={d.lab.testMethodPlaceholder}
+              value={testMethod}
+              onChange={(e) => setTestMethod(e.target.value)}
             />
           </div>
           <div className="space-y-2">

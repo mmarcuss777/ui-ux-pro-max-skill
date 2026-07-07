@@ -46,6 +46,9 @@ export function OffersTab({
   const [open, setOpen] = useState(false)
   const [type, setType] = useState(offerTypes[0])
   const [name, setName] = useState("")
+  const [audience, setAudience] = useState("")
+  const [problem, setProblem] = useState("")
+  const [whyBuy, setWhyBuy] = useState("")
   const [cost, setCost] = useState("")
   const [price, setPrice] = useState("")
   const [error, setError] = useState<string | null>(null)
@@ -65,6 +68,9 @@ export function OffersTab({
       workspace_id: workspaceId,
       type,
       name: name.trim(),
+      audience: audience.trim() || null,
+      problem: problem.trim() || null,
+      why_buy: whyBuy.trim() || null,
       cost: cost ? Number(cost) : 0,
       price: price ? Number(price) : 0,
     })
@@ -76,6 +82,9 @@ export function OffersTab({
     }
 
     setName("")
+    setAudience("")
+    setProblem("")
+    setWhyBuy("")
     setCost("")
     setPrice("")
     setSaving(false)
@@ -116,13 +125,44 @@ export function OffersTab({
               </Select>
             </div>
             <div className="space-y-2">
-              <Label htmlFor="offer-name">{d.offers.name}</Label>
+              <Label htmlFor="offer-name">{d.offers.whatSell}</Label>
               <Input
                 id="offer-name"
                 required
                 maxLength={120}
+                placeholder={d.offers.whatSellPlaceholder}
                 value={name}
                 onChange={(e) => setName(e.target.value)}
+              />
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="offer-audience">{d.offers.audienceLabel}</Label>
+              <Input
+                id="offer-audience"
+                maxLength={200}
+                placeholder={d.offers.audiencePlaceholder}
+                value={audience}
+                onChange={(e) => setAudience(e.target.value)}
+              />
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="offer-problem">{d.offers.problemLabel}</Label>
+              <Input
+                id="offer-problem"
+                maxLength={200}
+                placeholder={d.offers.problemPlaceholder}
+                value={problem}
+                onChange={(e) => setProblem(e.target.value)}
+              />
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="offer-why">{d.offers.whyBuyLabel}</Label>
+              <Input
+                id="offer-why"
+                maxLength={200}
+                placeholder={d.offers.whyBuyPlaceholder}
+                value={whyBuy}
+                onChange={(e) => setWhyBuy(e.target.value)}
               />
             </div>
             <div className="grid grid-cols-2 gap-3">
@@ -179,6 +219,13 @@ export function OffersTab({
                     <p className="truncate text-sm font-medium text-ink">
                       {offer.name}
                     </p>
+                    {(offer.audience || offer.problem) && (
+                      <p className="mt-0.5 truncate text-xs text-muted-foreground">
+                        {[offer.audience, offer.problem]
+                          .filter(Boolean)
+                          .join(" — ")}
+                      </p>
+                    )}
                     <p className="mt-1 flex items-center gap-2 text-xs text-muted-foreground">
                       <Badge variant="outline">{label(offer.type)}</Badge>
                       {formatMoney(offer.cost ?? 0)} {d.offers.costWord} ·{" "}

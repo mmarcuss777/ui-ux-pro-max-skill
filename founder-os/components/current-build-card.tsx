@@ -66,9 +66,14 @@ export function CurrentBuildCard({
                 <span className="font-medium text-gold-dark">
                   {d.currentBuild.nextMove}:
                 </span>{" "}
-                <span className="text-ink">
-                  {build.next_action || d.currentBuild.noNext}
-                </span>
+                {build.next_action ? (
+                  <span className="text-ink">{build.next_action}</span>
+                ) : (
+                  // A build without a next move is stalled — make it sting.
+                  <span className="font-medium text-danger">
+                    {d.currentBuild.noNext}
+                  </span>
+                )}
               </p>
             </div>
             <p className="text-xs text-muted-foreground">

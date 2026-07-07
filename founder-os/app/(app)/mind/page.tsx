@@ -1,17 +1,15 @@
-import Link from "next/link"
-
+import { MindFormDialog } from "@/components/mind-form-dialog"
 import { ScreenTimeUploader } from "@/components/screen-time-uploader"
 import { WeekGrid } from "@/components/week-grid"
-import { PrimaryCta } from "@/components/primary-cta"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { daysAgo } from "@/lib/dates"
 import { getT } from "@/lib/i18n-server"
+import type { MindData } from "@/lib/log-schema"
 import { MIND_TYPES, streak, weekGrid } from "@/lib/stats"
 import { createClient } from "@/lib/supabase/server"
+import { getWorkspaces, resolveActiveWorkspace } from "@/lib/workspace"
 import type { Log } from "@/types/db"
-
-type MindData = { lesson?: string; note?: string }
 type ScreenData = {
   total_minutes?: number | null
   wasted_minutes?: number | null
@@ -29,6 +27,8 @@ function formatMinutes(minutes: number | null | undefined): string {
 export default async function MindPage() {
   const supabase = createClient()
   const { d } = getT()
+  const workspaces = await getWorkspaces()
+  const active = resolveActiveWorkspace(workspaces)!
 
   const [{ data: mindLogs }, { data: screenLogs }] = await Promise.all([
     supabase
@@ -59,9 +59,7 @@ export default async function MindPage() {
           <h1 className="text-2xl font-bold text-ink">{d.mind.title}</h1>
           <p className="text-sm text-muted-foreground">{d.mind.subtitle}</p>
         </div>
-        <PrimaryCta asChild>
-          <Link href="/log">{d.mind.cta}</Link>
-        </PrimaryCta>
+        <MindFormDialog workspaceId={active.id} />
       </div>
 
       <Tabs defaultValue="journal">
@@ -116,19 +114,31 @@ export default async function MindPage() {
                 <ul className="divide-y divide-line">
                   {recent.map((log) => {
                     const data = (log.data ?? {}) as MindData
+                    const chips: string[] = []
+                    if (typeof data.focus === "number")
+                      chips.push(`${data.focus}/5 ${d.mind.focusShort}`)
+                    if (typeof data.learning_minutes === "number")
+                      chips.push(
+                        `${data.learning_minutes} ${d.mind.minutesShort}`
+                      )
                     return (
                       <li key={log.id} className="space-y-1 py-3">
                         <div className="flex items-center gap-3">
                           <span className="shrink-0 text-xs tabular-nums text-muted-foreground">
                             {log.date}
                           </span>
-                          <span className="min-w-0 truncate text-sm text-ink">
+                          <span className="min-w-0 flex-1 truncate text-sm text-ink">
                             {data.lesson || data.note || "—"}
                           </span>
+                          {chips.length > 0 && (
+                            <span className="shrink-0 rounded-full bg-gold/10 px-2 py-0.5 text-[11px] font-medium tabular-nums text-gold-dark">
+                              {chips.join(" · ")}
+                            </span>
+                          )}
                         </div>
-                        {data.lesson && data.note && (
+                        {(data.tomorrow || data.note) && data.lesson && (
                           <p className="pl-[4.5rem] text-xs text-muted-foreground">
-                            {data.note}
+                            {data.tomorrow || data.note}
                           </p>
                         )}
                       </li>

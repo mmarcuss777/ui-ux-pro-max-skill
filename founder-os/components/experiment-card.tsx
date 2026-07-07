@@ -22,9 +22,10 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select"
+import { Input } from "@/components/ui/input"
 import type { Experiment } from "@/types/db"
 
-const DECISIONS = ["kill", "continue", "pivot", "scale"] as const
+const DECISIONS = ["continue", "pivot", "kill", "scale"] as const
 
 export function ExperimentCard({
   experiment,
@@ -36,6 +37,7 @@ export function ExperimentCard({
   const router = useRouter()
   const d = useT()
   const locale = useLocale()
+  const [result, setResult] = useState(experiment.result ?? "")
   const [checkOpen, setCheckOpen] = useState(false)
   const [checkResult, setCheckResult] = useState<string | null>(null)
   const [checkError, setCheckError] = useState<string | null>(null)
@@ -82,6 +84,11 @@ export function ExperimentCard({
     <Card>
       <CardContent className="space-y-3 p-4">
         <p className="text-sm font-medium text-ink">{experiment.hypothesis}</p>
+        {experiment.test_method && (
+          <p className="text-xs text-muted-foreground">
+            {d.lab.testMethod}: {experiment.test_method}
+          </p>
+        )}
         {experiment.metric && (
           <p className="text-xs text-muted-foreground">
             {d.lab.metricLabel}: {experiment.metric}
@@ -99,14 +106,38 @@ export function ExperimentCard({
             {overdue && ` — ${d.lab.overdue}`}
           </p>
         )}
-        {experiment.result && (
+        {experiment.result && experiment.status !== "decided" && (
           <p className="text-xs text-muted-foreground">
             {d.lab.resultLabel}: {experiment.result}
           </p>
         )}
 
         {experiment.status === "decided" ? (
-          <div className="flex items-center gap-2">
+          <div className="space-y-2">
+            {/* The outcome gets written down before the verdict — that's
+                what makes the next experiment smarter. */}
+            <div className="flex items-center gap-2">
+              <Input
+                className="h-9 flex-1 text-xs"
+                maxLength={300}
+                placeholder={d.lab.resultPlaceholder}
+                value={result}
+                onChange={(e) => setResult(e.target.value)}
+              />
+              {result.trim() !== (experiment.result ?? "").trim() && (
+                <Button
+                  variant="outline"
+                  size="sm"
+                  className="h-9 shrink-0"
+                  onClick={() =>
+                    updateExperiment({ result: result.trim() || null })
+                  }
+                >
+                  {d.lab.saveResult}
+                </Button>
+              )}
+            </div>
+            <div className="flex items-center gap-2">
             <Select
               value={experiment.decision ?? undefined}
               onValueChange={(value) => updateExperiment({ decision: value })}
@@ -142,6 +173,7 @@ export function ExperimentCard({
                   experiment.decision}
               </Badge>
             )}
+            </div>
           </div>
         ) : (
           <div className="flex flex-wrap gap-2">
