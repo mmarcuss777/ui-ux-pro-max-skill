@@ -134,6 +134,48 @@ export default async function TodayPage() {
   // A streak milestone reached today deserves its own line.
   const milestone = [100, 30, 7].find((m) => streakDays === m) ?? null
 
+  // Insight for the close-day summary: which pillar lifts this user's
+  // days the most (evidence-only, last 30 days). A small personalized
+  // observation is a variable reward — you never know which one lands.
+  const txDateSet = new Set(txDates.map((t) => t.date))
+  const days: { score: number; has: Record<string, boolean> }[] = []
+  for (let i = 1; i <= 29; i++) {
+    const date = daysAgo(i)
+    const has = {
+      body: monthLogs.some(
+        (l) => l.date === date && ["body", "fitness"].includes(l.type)
+      ),
+      mind: monthLogs.some(
+        (l) => l.date === date && ["mind", "learning"].includes(l.type)
+      ),
+      build: monthLogs.some((l) => l.date === date && l.type === "build"),
+    }
+    const money = txDateSet.has(date)
+    const score =
+      (Number(has.body) + Number(has.mind) + Number(has.build) + Number(money)) * 25
+    days.push({ score, has })
+  }
+  let insight: string | null = null
+  let bestDelta = 0
+  for (const pillar of ["body", "mind", "build"] as const) {
+    const withPillar = days.filter((day) => day.has[pillar])
+    const withoutPillar = days.filter((day) => !day.has[pillar])
+    if (withPillar.length < 3 || withoutPillar.length < 3) continue
+    const avg = (list: typeof days) =>
+      list.reduce((sum, day) => sum + day.score, 0) / list.length
+    const delta = Math.round(avg(withPillar) - avg(withoutPillar))
+    if (delta > bestDelta && delta >= 10) {
+      bestDelta = delta
+      insight = `${d.today.insightPre} ${d.pillars[pillar]} ${d.today.insightMid} ${delta} ${d.today.insightPost}`
+    }
+  }
+  if (!insight) {
+    const weekActive = [0, 1, 2, 3, 4, 5, 6].filter((n) =>
+      allDates.has(daysAgo(n))
+    ).length
+    insight = `${d.today.insightFallback} ${weekActive}/7 ${d.review.daysActive}.`
+  }
+
   return (
     <div className="space-y-6">
       <div className="flex items-end justify-between gap-3">
@@ -292,6 +334,7 @@ export default async function TodayPage() {
         streakDays={streakDays}
         pillarsDone={pillarsDone}
         workspaceId={active.id}
+        insight={insight}
       />
 
       <RemindersCard />

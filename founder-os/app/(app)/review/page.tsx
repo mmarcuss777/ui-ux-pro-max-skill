@@ -1,17 +1,21 @@
 import { ReviewGenerator } from "@/components/review-generator"
 import { ScoreTrend } from "@/components/score-trend"
+import { ShareWeek } from "@/components/share-week"
 import { WeeklyResetForm } from "@/components/weekly-reset-form"
 import { Card, CardContent } from "@/components/ui/card"
-import { daysAgo, today, weekStart } from "@/lib/dates"
+import { daysAgo, isoDate, shortDate, today, weekStart } from "@/lib/dates"
 import { getT } from "@/lib/i18n-server"
 import type { MissionData, WeeklyResetData } from "@/lib/log-schema"
 import { formatMoney } from "@/lib/money"
 import {
+  ACTION_LOG_TYPES,
   BODY_TYPES,
   MIND_TYPES,
+  actionDates,
   dailyScore,
   pillarComplete,
   pillarEvidenceFor,
+  streakWithShields,
   weekPillarScore,
 } from "@/lib/stats"
 import { createClient } from "@/lib/supabase/server"
@@ -110,12 +114,13 @@ function buildSummary(
 
 export default async function ReviewPage() {
   const supabase = createClient()
-  const { d } = getT()
+  const { d, locale } = getT()
   const workspaces = await getWorkspaces()
   const active = resolveActiveWorkspace(workspaces)!
   const weekAgo = daysAgo(6)
 
   const monthAgo = daysAgo(29)
+  const halfYearAgo = daysAgo(179)
   const [
     { data: logs },
     { data: experiments },
@@ -124,6 +129,8 @@ export default async function ReviewPage() {
     { data: resets },
     { data: monthRows },
     { data: monthTx },
+    { data: historyRows },
+    { data: historyTx },
   ] = await Promise.all([
     supabase
       .from("logs")
@@ -166,6 +173,10 @@ export default async function ReviewPage() {
       .neq("type", "screen_time")
       .gte("date", monthAgo),
     supabase.from("transactions").select("date").gte("date", monthAgo),
+    // Half a year of bare date+type pairs: identity evidence, rank and
+    // perfect-week trophies live on long memory, not one month.
+    supabase.from("logs").select("date,type").gte("date", halfYearAgo),
+    supabase.from("transactions").select("date").gte("date", halfYearAgo),
   ])
 
   const weekLogs: Log[] = logs ?? []
@@ -237,6 +248,59 @@ export default async function ReviewPage() {
     })
   }
 
+  // Identity block: long-memory numbers that survive any broken streak.
+  const history = historyRows ?? []
+  const historyDates = actionDates(history, historyTx ?? [])
+  const evidenceCount = history.filter((r) =>
+    ACTION_LOG_TYPES.includes(r.type)
+  ).length
+  const activeDaysTotal = historyDates.size
+  const RANKS = [7, 21, 50, 100, 200]
+  const rankLevel = RANKS.filter((t) => activeDaysTotal >= t).length
+  const rankLabel =
+    rankLevel > 0 ? `Operator ${["I", "II", "III", "IV", "V"][rankLevel - 1]}` : null
+
+  // Perfect-week trophies over the last 12 completed weeks.
+  const trophyWeeks: string[] = []
+  const thisMonday = new Date()
+  thisMonday.setDate(thisMonday.getDate() - ((thisMonday.getDay() + 6) % 7))
+  for (let week = 1; week <= 12; week++) {
+    const monday = new Date(thisMonday)
+    monday.setDate(monday.getDate() - 7 * week)
+    let full = true
+    for (let i = 0; i < 7; i++) {
+      const day = new Date(monday)
+      day.setDate(day.getDate() + i)
+      if (!historyDates.has(isoDate(day))) {
+        full = false
+        break
+      }
+    }
+    if (full) {
+      const sunday = new Date(monday)
+      sunday.setDate(sunday.getDate() + 6)
+      trophyWeeks.push(
+        `${shortDate(isoDate(monday), locale)}–${shortDate(isoDate(sunday), locale)}`
+      )
+    }
+  }
+
+  // Best day this week (peak-end rule: the week is remembered by its peak).
+  const lastSeven = trendPoints.slice(-7)
+  const best = lastSeven.reduce(
+    (top, p) => (p.score > top.score ? p : top),
+    lastSeven[0]
+  )
+  const bestDayLabel =
+    best && best.score > 0
+      ? `${new Date(best.date).toLocaleDateString(
+          locale === "sk" ? "sk-SK" : "en-GB",
+          { weekday: "long" }
+        )} · ${best.score}/100`
+      : null
+
+  const { streak: streakDays } = streakWithShields(historyDates)
+
   const summary = buildSummary(
     active.name,
     active.goals,
@@ -282,7 +346,54 @@ export default async function ReviewPage() {
         </div>
       </div>
 
+      {bestDayLabel && (
+        <p className="flex items-center gap-2 rounded-xl border border-gold/25 bg-gold/[0.07] px-3.5 py-2.5 text-sm">
+          <span className="shrink-0 font-medium text-muted-foreground">
+            {d.review.bestDay}:
+          </span>
+          <span className="min-w-0 truncate font-semibold capitalize text-ink">
+            {bestDayLabel}
+          </span>
+        </p>
+      )}
+
       <ScoreTrend points={trendPoints} />
+
+      {/* Identity block: numbers that survive any broken streak. */}
+      <Card>
+        <CardContent className="space-y-3 p-5">
+          <p className="text-sm text-ink">
+            <span className="text-xl font-bold tabular-nums text-gold-dark">
+              {evidenceCount}
+            </span>{" "}
+            {d.review.evidenceLine}
+          </p>
+          <div className="flex flex-wrap items-center gap-2">
+            {rankLabel && (
+              <span className="gold-fill rounded-full px-3 py-1.5 text-xs font-bold">
+                {rankLabel}
+              </span>
+            )}
+            <span className="rounded-full bg-secondary px-3 py-1.5 text-xs font-medium tabular-nums text-muted-foreground">
+              {activeDaysTotal} {d.review.daysActive}
+            </span>
+            {trophyWeeks.map((label) => (
+              <span
+                key={label}
+                title={d.review.trophies}
+                className="rounded-full border border-gold/40 bg-gold/10 px-3 py-1.5 text-xs font-semibold tabular-nums text-gold-dark"
+              >
+                ★ {label}
+              </span>
+            ))}
+          </div>
+          <ShareWeek
+            scores={scoreCards.map(({ label, score }) => ({ label, score }))}
+            streakDays={streakDays}
+            focus={(reset?.focus ?? "").trim() || null}
+          />
+        </CardContent>
+      </Card>
 
       <WeeklyResetForm
         resetId={resetRow?.id ?? null}

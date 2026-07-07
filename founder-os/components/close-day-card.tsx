@@ -31,6 +31,7 @@ export function CloseDayCard({
   streakDays,
   pillarsDone,
   workspaceId,
+  insight,
 }: {
   closeId: string | null
   close: CloseDayData | null
@@ -38,6 +39,7 @@ export function CloseDayCard({
   streakDays: number
   pillarsDone: number
   workspaceId: string
+  insight?: string | null
 }) {
   const router = useRouter()
   const d = useT()
@@ -250,6 +252,12 @@ export function CloseDayCard({
             </p>
           </div>
         </div>
+
+        {insight && (
+          <p className="rounded-xl bg-gold/[0.08] px-3 py-2.5 text-sm font-medium text-gold-dark">
+            {insight}
+          </p>
+        )}
 
         {(close?.lesson ?? "").trim() !== "" && (
           <p className="text-sm text-muted-foreground">

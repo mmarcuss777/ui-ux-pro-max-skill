@@ -138,7 +138,7 @@ export default function OnboardingPage() {
       }
     }
     setLoading(false)
-    setStep(3)
+    finish()
   }
 
   async function handleBuild(event: React.FormEvent) {
@@ -171,7 +171,7 @@ export default function OnboardingPage() {
   async function handleOneMove(event: React.FormEvent) {
     event.preventDefault()
     if (oneMove.trim() === "" || !workspaceId || !userId) {
-      finish()
+      setStep(3)
       return
     }
     setLoading(true)
@@ -189,7 +189,7 @@ export default function OnboardingPage() {
       setError(insertError.message)
       return
     }
-    finish()
+    setStep(3)
   }
 
   function PresetChips({
@@ -215,14 +215,16 @@ export default function OnboardingPage() {
     )
   }
 
+  // One Move comes right after the workspace: the first session must end
+  // with a win in under a minute — goals and builds can wait.
   const stepTitles: Record<number, { title: string; subtitle: string }> = {
     1: { title: d.onboarding.title, subtitle: d.onboarding.subtitle },
-    2: { title: d.onboarding.goalsTitle, subtitle: d.onboarding.goalsSubtitle },
-    3: { title: d.onboarding.buildTitle, subtitle: d.onboarding.buildSubtitle },
-    4: {
+    2: {
       title: d.onboarding.oneMoveTitle,
       subtitle: d.onboarding.oneMoveSubtitle,
     },
+    3: { title: d.onboarding.buildTitle, subtitle: d.onboarding.buildSubtitle },
+    4: { title: d.onboarding.goalsTitle, subtitle: d.onboarding.goalsSubtitle },
   }
 
   return (
@@ -324,7 +326,7 @@ export default function OnboardingPage() {
             </form>
           )}
 
-          {step === 2 && (
+          {step === 4 && (
             <form onSubmit={handleTargets} className="space-y-6">
               <div className="space-y-3">
                 <Label htmlFor="body-goal">{d.onboarding.bodyGoalLabel}</Label>
@@ -366,13 +368,9 @@ export default function OnboardingPage() {
               {error && <p className="text-sm text-danger">{error}</p>}
               <div className="flex items-center gap-3">
                 <PrimaryCta type="submit" className="flex-1" disabled={loading}>
-                  {loading ? d.common.saving : d.onboarding.continueWord}
+                  {loading ? d.common.saving : d.onboarding.finish}
                 </PrimaryCta>
-                <Button
-                  type="button"
-                  variant="ghost"
-                  onClick={() => setStep(3)}
-                >
+                <Button type="button" variant="ghost" onClick={finish}>
                   {d.onboarding.skip}
                 </Button>
               </div>
@@ -434,7 +432,7 @@ export default function OnboardingPage() {
             </form>
           )}
 
-          {step === 4 && (
+          {step === 2 && (
             <form onSubmit={handleOneMove} className="space-y-5">
               <div className="space-y-2">
                 <Label htmlFor="onboarding-move">
@@ -456,12 +454,23 @@ export default function OnboardingPage() {
                   className="flex-1"
                   disabled={loading || oneMove.trim() === ""}
                 >
-                  {loading ? d.common.saving : d.onboarding.finish}
+                  {loading ? d.common.saving : d.onboarding.continueWord}
                 </PrimaryCta>
-                <Button type="button" variant="ghost" onClick={finish}>
+                <Button
+                  type="button"
+                  variant="ghost"
+                  onClick={() => setStep(3)}
+                >
                   {d.onboarding.skip}
                 </Button>
               </div>
+              <button
+                type="button"
+                onClick={finish}
+                className="w-full text-center text-xs text-muted-foreground underline-offset-2 hover:underline"
+              >
+                {d.onboarding.skipAll}
+              </button>
             </form>
           )}
         </CardContent>
