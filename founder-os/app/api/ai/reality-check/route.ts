@@ -69,6 +69,7 @@ export async function POST(request: Request) {
     context?: string
     summary?: string
     locale?: string
+    workspaceId?: string
   }
   try {
     body = await request.json()
@@ -128,6 +129,16 @@ export async function POST(request: Request) {
       REALITY_CHECK_SYSTEM + languageInstruction(locale),
       prompt
     )
+    // Persist the verdict — the next check (and the daily briefing) get
+    // to confront the founder with it.
+    if (body.context) {
+      await supabase.from("logs").insert({
+        user_id: user.id,
+        workspace_id: body.workspaceId ?? null,
+        type: "reality_check",
+        data: { content: result },
+      })
+    }
     return NextResponse.json({ result })
   } catch (error) {
     console.error("Reality check failed:", error)

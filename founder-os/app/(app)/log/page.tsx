@@ -13,11 +13,12 @@ type LogData = {
   note?: string
   top_action?: string
   lesson?: string
+  action?: string // completed business steps from the step chain / briefing
 }
 
 function logSummary(log: Log): string {
   const data = (log.data ?? {}) as LogData
-  return data.lesson || data.note || data.top_action || "—"
+  return data.lesson || data.note || data.action || data.top_action || "—"
 }
 
 export default async function LogPage() {

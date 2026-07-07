@@ -45,6 +45,28 @@ export type BodyGoalData = {
   week_target?: string
 }
 
+// type = 'briefing' — Nexa's daily business briefing (one row/day).
+// `move` is the one suggested action; completing it writes a 'build' log.
+export type BriefingData = {
+  content?: string
+  move?: string
+  move_done?: boolean
+}
+
+// type = 'build' — a completed business step. Written by the step chain
+// and the briefing move; counts as build-pillar action in scoring.
+export type BuildStepData = {
+  action?: string
+  source?: "step" | "briefing"
+  note?: string
+}
+
+// type = 'reality_check' — persisted audit verdict, so the next check
+// can confront the founder with the previous one.
+export type RealityCheckData = {
+  content?: string
+}
+
 // type = 'daily' — the quick daily check-in
 export type DailyData = {
   energy?: number

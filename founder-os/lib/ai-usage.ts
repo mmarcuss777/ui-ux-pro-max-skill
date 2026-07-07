@@ -9,14 +9,21 @@ import type { Database } from "@/types/db"
 //   reality_check  — max 1 per day
 //   weekly_review  — max 1 per week
 //   screen_time    — max 2 per day (vision, most expensive)
+//   briefing       — max 2 per day (generate + one regenerate)
 
-export type AiKind = "ask_nexa" | "reality_check" | "weekly_review" | "screen_time"
+export type AiKind =
+  | "ask_nexa"
+  | "reality_check"
+  | "weekly_review"
+  | "screen_time"
+  | "briefing"
 
 const LIMITS: Record<AiKind, { max: number; sinceDays: number }> = {
   ask_nexa: { max: 10, sinceDays: 0 },
   reality_check: { max: 1, sinceDays: 0 },
   weekly_review: { max: 1, sinceDays: 6 },
   screen_time: { max: 2, sinceDays: 0 },
+  briefing: { max: 2, sinceDays: 0 },
 }
 
 export async function checkAiLimit(

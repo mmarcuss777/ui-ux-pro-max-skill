@@ -6,8 +6,18 @@ import { useLocale, useT } from "@/components/locale-provider"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 
-// One brutal AI audit of the current build — manual trigger, once per day.
-export function RealityCheckPanel({ context }: { context: string }) {
+// One brutal AI audit of the current build — manual trigger, once per
+// day. The verdict is persisted; the previous one stays visible so the
+// founder is always confronted with what the last audit said.
+export function RealityCheckPanel({
+  context,
+  workspaceId,
+  last,
+}: {
+  context: string
+  workspaceId?: string
+  last?: { content: string; date: string } | null
+}) {
   const d = useT()
   const locale = useLocale()
   const [result, setResult] = useState<string | null>(null)
@@ -20,7 +30,7 @@ export function RealityCheckPanel({ context }: { context: string }) {
     const response = await fetch("/api/ai/reality-check", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ context, locale }),
+      body: JSON.stringify({ context, locale, workspaceId }),
     })
     const data = await response.json()
     if (response.status === 429) {
@@ -53,13 +63,23 @@ export function RealityCheckPanel({ context }: { context: string }) {
           {loading ? d.buildPage.checking : d.buildPage.runCheck}
         </Button>
       </CardHeader>
-      {(error || result) && (
-        <CardContent>
+      {(error || result || last) && (
+        <CardContent className="space-y-3">
           {error && <p className="text-sm text-danger">{error}</p>}
           {result && (
             <pre className="whitespace-pre-wrap font-sans text-sm">
               {result}
             </pre>
+          )}
+          {!result && last && (
+            <details className="group">
+              <summary className="cursor-pointer text-xs font-semibold uppercase tracking-wider text-muted-foreground">
+                {d.buildPage.lastCheck} · {last.date}
+              </summary>
+              <pre className="mt-2 whitespace-pre-wrap font-sans text-sm text-ink/80">
+                {last.content}
+              </pre>
+            </details>
           )}
         </CardContent>
       )}

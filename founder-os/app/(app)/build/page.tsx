@@ -4,49 +4,63 @@ import {
   ActivateBuildButton,
   BuildFormDialog,
 } from "@/components/build-form-dialog"
+import { BriefingCard } from "@/components/briefing-card"
 import { CurrentBuildCard } from "@/components/current-build-card"
 import { RealityCheckPanel } from "@/components/reality-check-panel"
-import { Button } from "@/components/ui/button"
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
-import { BUILD_TYPES, type BuildType } from "@/lib/build-types"
+import { StepChain, type StepHistoryItem } from "@/components/step-chain"
+import { Card, CardContent } from "@/components/ui/card"
 import { daysAgo, today } from "@/lib/dates"
 import { getT } from "@/lib/i18n-server"
+import type { BriefingData, BuildStepData } from "@/lib/log-schema"
 import { formatMoney } from "@/lib/money"
+import { pulseDelta, pulseTiles } from "@/lib/pulse"
+import type { MetricSlim } from "@/lib/stats"
 import { createClient } from "@/lib/supabase/server"
 import { getWorkspaces, resolveActiveWorkspace } from "@/lib/workspace"
-import type { Build, Contact, Experiment, Offer, Transaction } from "@/types/db"
+import type { Build, Experiment, Transaction } from "@/types/db"
 
-function buildContext(build: Build, goals: string | null): string {
-  const fields = (build.fields ?? {}) as Record<string, string>
-  const filled = Object.entries(fields)
-    .filter(([, value]) => value?.trim())
-    .map(([key, value]) => `${key}: ${value}`)
+function buildContext(
+  build: Build,
+  goals: string | null,
+  pulse: string,
+  steps: string[],
+  lastVerdict: string | null
+): string {
   return [
     `Founder's goals: ${goals?.trim() || "(not set)"}`,
     `Project: ${build.name}`,
     `Business type: ${build.business_type}, stage: ${build.stage}, priority: ${build.priority}`,
     `Week goal: ${build.week_goal ?? "-"}`,
     `Next action: ${build.next_action ?? "-"}`,
-    filled.length ? `Playbook:\n${filled.join("\n")}` : "Playbook: empty",
+    `Live numbers (this week vs last): ${pulse}`,
+    steps.length
+      ? `Recently completed steps:\n${steps.join("\n")}`
+      : "Recently completed steps: none.",
+    lastVerdict ? `Previous audit verdict:\n${lastVerdict}` : "",
     build.notes ? `Notes: ${build.notes}` : "",
   ]
     .filter(Boolean)
     .join("\n")
 }
 
+// Business: the AI operator's room. Live pulse from connected sources,
+// one daily briefing (conclusion + move), a step chain that feeds the
+// pillar/streak engine, and an audit with memory. Manual bookkeeping is
+// gone — the founder confirms decisions, the data does the reporting.
 export default async function BuildPage() {
   const supabase = createClient()
   const { d } = getT()
   const workspaces = await getWorkspaces()
   const active = resolveActiveWorkspace(workspaces)!
-  const weekAgo = daysAgo(6)
   const todayDate = today()
+  const monthAgo = daysAgo(29)
+  const weekAgo = daysAgo(6)
 
   const [
     { data: buildRows },
+    { data: metricRows },
+    { data: logRows },
     { data: experiments },
-    { data: offers },
-    { data: contacts },
     { data: transactions },
   ] = await Promise.all([
     supabase
@@ -54,88 +68,67 @@ export default async function BuildPage() {
       .select("*")
       .eq("workspace_id", active.id)
       .order("created_at", { ascending: false }),
+    supabase
+      .from("imported_metrics")
+      .select("date,metric,value")
+      .gte("date", daysAgo(13)),
+    supabase
+      .from("logs")
+      .select("id,type,date,data,workspace_id,created_at")
+      .in("type", ["build", "briefing", "reality_check"])
+      .gte("date", monthAgo)
+      .order("created_at", { ascending: false }),
     supabase.from("experiments").select("*").eq("workspace_id", active.id),
-    supabase.from("offers").select("*").eq("workspace_id", active.id),
-    supabase.from("contacts").select("*").eq("workspace_id", active.id),
     supabase.from("transactions").select("*"),
   ])
 
   const builds: Build[] = buildRows ?? []
   const build = builds.find((b) => b.status === "active") ?? null
   const others = builds.filter((b) => b.status !== "active")
+  const logs = logRows ?? []
 
+  // Pulse: this week vs the one before, from imported metrics only.
+  const metrics: MetricSlim[] = metricRows ?? []
+  const tiles = pulseTiles(metrics, todayDate)
+
+  // Today's briefing + step history + last audit, all from `logs`.
+  const briefingRow = logs.find(
+    (l) => l.type === "briefing" && l.date === todayDate
+  )
+  const briefing = (briefingRow?.data as BriefingData) ?? null
+  const stepHistory: StepHistoryItem[] = logs
+    .filter((l) => l.type === "build")
+    .slice(0, 6)
+    .map((l) => ({
+      id: l.id,
+      date: l.date,
+      action: ((l.data as BuildStepData)?.action ?? "").trim(),
+    }))
+    .filter((s) => s.action !== "")
+  const lastCheck = logs.find((l) => l.type === "reality_check")
+  const lastVerdict = lastCheck
+    ? {
+        content: ((lastCheck.data as { content?: string })?.content ?? "").trim(),
+        date: lastCheck.date,
+      }
+    : null
+
+  // Compact status row (experiments / money) — context, not navigation.
   const allExperiments: Experiment[] = experiments ?? []
-  const allOffers: Offer[] = offers ?? []
-  const allContacts: Contact[] = contacts ?? []
-  const allTx: Transaction[] = transactions ?? []
-
   const testing = allExperiments.filter((e) => e.status === "testing").length
   const overdue = allExperiments.filter(
     (e) => e.status !== "decided" && e.deadline && e.deadline < todayDate
   ).length
-  const activeOffers = allOffers.filter((o) => o.status === "active").length
-  const bestMargin = allOffers.reduce<Offer | null>(
-    (best, offer) =>
-      (offer.margin ?? 0) > (best?.margin ?? -Infinity) ? offer : best,
-    null
-  )
-  const leadCount = allContacts.filter((c) => c.contact_type === "lead").length
-  const clientCount = allContacts.filter(
-    (c) => c.contact_type === "client"
-  ).length
-  const balance = allTx.reduce(
-    (sum, t) => sum + (t.type === "in" ? t.amount : -t.amount),
-    0
-  )
+  const allTx: Transaction[] = transactions ?? []
   const net7 = allTx
     .filter((t) => t.date >= weekAgo)
     .reduce((sum, t) => sum + (t.type === "in" ? t.amount : -t.amount), 0)
 
-  const playbookFields = build
-    ? BUILD_TYPES[(build.business_type as BuildType) ?? "custom"]?.fields ?? []
-    : []
-  const fieldValues = (build?.fields ?? {}) as Record<string, string>
-
-  const subCards = [
-    {
-      title: d.buildPage.experimentsCard,
-      href: "/lab",
-      hasData: allExperiments.length > 0,
-      empty: d.buildPage.experimentsEmpty,
-      line1: `${testing} ${d.buildPage.testingNow}`,
-      line2: overdue > 0 ? `${overdue} ${d.buildPage.overdue}` : null,
-      danger: overdue > 0,
-    },
-    {
-      title: d.buildPage.offersCard,
-      href: "/offers",
-      hasData: allOffers.length > 0,
-      empty: d.buildPage.offersEmpty,
-      line1: `${activeOffers} ${d.buildPage.activeOffers}`,
-      line2: bestMargin
-        ? `${d.buildPage.bestMargin}: ${formatMoney(bestMargin.margin ?? 0)}`
-        : null,
-      danger: false,
-    },
-    {
-      title: d.buildPage.pipelineCard,
-      href: "/offers",
-      hasData: allContacts.length > 0,
-      empty: d.buildPage.pipelineEmpty,
-      line1: `${leadCount} ${d.buildPage.leads} · ${clientCount} ${d.buildPage.clients}`,
-      line2: null,
-      danger: false,
-    },
-    {
-      title: d.buildPage.moneyCard,
-      href: "/money",
-      hasData: allTx.length > 0,
-      empty: d.buildPage.moneyEmpty,
-      line1: `${d.buildPage.balance}: ${formatMoney(balance)}`,
-      line2: `${d.buildPage.net7}: ${formatMoney(net7)}`,
-      danger: net7 < 0,
-    },
-  ]
+  const metricLabel = (key: string): string => {
+    const dict = d.connect as unknown as Record<string, string>
+    return dict[`m_${key}`] ?? key
+  }
+  const moneyMetric = (key: string) => key === "revenue" || key === "net_cashflow"
 
   return (
     <div className="space-y-6">
@@ -146,95 +139,152 @@ export default async function BuildPage() {
             {d.buildPage.subtitle}
           </p>
         </div>
-        <div className="flex items-center gap-2">
-          {build && (
-            <BuildFormDialog
-              workspaceId={active.id}
-              build={build}
-              hasActive
-            />
-          )}
-          {!build && (
-            <BuildFormDialog workspaceId={active.id} hasActive={false} />
-          )}
-        </div>
+        <BuildFormDialog
+          workspaceId={active.id}
+          build={build}
+          hasActive={build !== null}
+        />
       </div>
 
       <CurrentBuildCard build={build} />
 
-      {build && (
-        <>
-          <Card>
-            <CardHeader className="pb-3">
-              <CardTitle className="text-base text-gold-dark">
-                {d.buildPage.playbook}
-              </CardTitle>
-              <p className="text-xs text-muted-foreground">
-                {d.buildPage.playbookHint}
-              </p>
-            </CardHeader>
-            <CardContent>
-              <dl className="grid gap-x-6 gap-y-3 sm:grid-cols-2">
-                {playbookFields.map((key) => (
-                  <div key={key}>
-                    <dt className="text-xs font-medium uppercase tracking-wider text-muted-foreground">
-                      {d.buildFields[key]}
-                    </dt>
-                    <dd className="mt-0.5 text-sm text-ink">
-                      {fieldValues[key]?.trim() || "—"}
-                    </dd>
-                  </div>
-                ))}
-              </dl>
-            </CardContent>
-          </Card>
-
-          <RealityCheckPanel context={buildContext(build, active.goals)} />
-        </>
-      )}
-
-      <div className="grid gap-4 sm:grid-cols-2">
-        {subCards.map((card) => (
-          <Card key={card.title}>
-            <CardHeader className="flex-row items-center justify-between space-y-0 pb-3">
-              <CardTitle className="text-base">{card.title}</CardTitle>
-              <Button asChild variant="ghost" size="sm" className="h-8 text-xs">
-                <Link href={card.href}>{d.common.open}</Link>
-              </Button>
-            </CardHeader>
-            <CardContent className="space-y-1 text-sm">
-              {card.hasData ? (
-                <>
-                  <p className="text-ink">{card.line1}</p>
-                  {card.line2 && (
+      {/* Pulse: live numbers from connected sources, trend vs last week. */}
+      <Card>
+        <CardContent className="p-4">
+          <div className="flex items-center justify-between gap-2">
+            <p className="text-xs font-semibold uppercase tracking-wider text-gold-dark">
+              {d.buildPage.pulseTitle}
+            </p>
+            <p className="text-[11px] text-muted-foreground">
+              {d.buildPage.vsLastWeek}
+            </p>
+          </div>
+          {tiles.length > 0 ? (
+            <div className="mt-3 grid grid-cols-2 gap-3 sm:grid-cols-3">
+              {tiles.map((tile) => {
+                const delta = pulseDelta(tile)
+                const up = tile.current >= tile.previous
+                return (
+                  <div key={tile.metric}>
+                    <p className="text-xs text-muted-foreground">
+                      {metricLabel(tile.metric)}
+                    </p>
+                    <p className="text-lg font-bold tabular-nums text-ink">
+                      {moneyMetric(tile.metric)
+                        ? formatMoney(tile.current)
+                        : Math.round(tile.current * 100) / 100}
+                    </p>
                     <p
                       className={
-                        card.danger
-                          ? "font-medium text-danger"
-                          : "text-muted-foreground"
+                        delta === 0
+                          ? "text-xs text-muted-foreground"
+                          : up
+                            ? "text-xs font-medium text-ok"
+                            : "text-xs font-medium text-danger"
                       }
                     >
-                      {card.line2}
+                      {delta === null
+                        ? d.buildPage.newSignal
+                        : `${up ? "▲" : "▼"} ${Math.abs(delta)} %`}
                     </p>
-                  )}
-                </>
-              ) : (
-                <p className="text-muted-foreground">{card.empty}</p>
-              )}
-            </CardContent>
-          </Card>
-        ))}
-      </div>
+                  </div>
+                )
+              })}
+            </div>
+          ) : (
+            <p className="mt-2 text-sm text-muted-foreground">
+              {d.buildPage.noPulse}{" "}
+              <Link
+                href="/connect"
+                className="font-medium text-gold-dark underline-offset-2 hover:underline"
+              >
+                {d.buildPage.connectCta}
+              </Link>
+            </p>
+          )}
+        </CardContent>
+      </Card>
+
+      <BriefingCard
+        briefingId={briefingRow?.id ?? null}
+        briefing={briefing}
+        workspaceId={active.id}
+      />
+
+      {build && (
+        <StepChain
+          buildId={build.id}
+          nextAction={build.next_action}
+          workspaceId={active.id}
+          history={stepHistory}
+        />
+      )}
+
+      {build && (
+        <RealityCheckPanel
+          context={buildContext(
+            build,
+            active.goals,
+            tiles
+              .map((t) => `${t.metric} ${t.current} (prev ${t.previous})`)
+              .join(", ") || "none",
+            stepHistory.map((s) => `${s.date}: ${s.action}`),
+            lastVerdict?.content ?? null
+          )}
+          workspaceId={active.id}
+          last={lastVerdict}
+        />
+      )}
+
+      {/* Status strip: context that matters, one line each. */}
+      <Card>
+        <CardContent className="divide-y divide-line p-0">
+          <Link
+            href="/lab"
+            className="flex items-center justify-between gap-3 px-4 py-3 text-sm transition-colors hover:bg-gold/[0.04]"
+          >
+            <span className="text-ink">{d.buildPage.experimentsCard}</span>
+            <span
+              className={
+                overdue > 0
+                  ? "font-medium text-danger"
+                  : "text-muted-foreground"
+              }
+            >
+              {testing} {d.buildPage.testingNow}
+              {overdue > 0 ? ` · ${overdue} ${d.buildPage.overdue}` : ""}
+            </span>
+          </Link>
+          <Link
+            href="/money"
+            className="flex items-center justify-between gap-3 px-4 py-3 text-sm transition-colors hover:bg-gold/[0.04]"
+          >
+            <span className="text-ink">{d.buildPage.moneyCard}</span>
+            <span
+              className={
+                net7 < 0 ? "font-medium text-danger" : "text-muted-foreground"
+              }
+            >
+              {d.buildPage.net7}: {formatMoney(net7)}
+            </span>
+          </Link>
+          <Link
+            href="/offers"
+            className="flex items-center justify-between gap-3 px-4 py-3 text-sm transition-colors hover:bg-gold/[0.04]"
+          >
+            <span className="text-ink">{d.buildPage.offersCard}</span>
+            <span className="text-muted-foreground">{d.common.open}</span>
+          </Link>
+        </CardContent>
+      </Card>
 
       {others.length > 0 && (
         <Card>
-          <CardHeader className="pb-3">
-            <CardTitle className="text-base">
+          <CardContent className="p-4">
+            <p className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
               {d.buildPage.otherBuilds}
-            </CardTitle>
-          </CardHeader>
-          <CardContent>
-            <ul className="divide-y divide-line">
+            </p>
+            <ul className="mt-2 divide-y divide-line">
               {others.map((other) => (
                 <li
                   key={other.id}
