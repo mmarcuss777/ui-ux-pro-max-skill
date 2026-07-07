@@ -76,8 +76,12 @@ export async function POST(request: Request) {
 
   // Assemble the operator's view server-side.
   const twoWeeksAgo = daysAgo(13)
-  const [{ data: workspaces }, { data: metrics }, { data: recentLogs }] =
-    await Promise.all([
+  const [
+    { data: workspaces },
+    { data: metrics },
+    { data: recentLogs },
+    { data: profileRows },
+  ] = await Promise.all([
       supabase.from("workspaces").select("id,name,goals,is_primary,status"),
       supabase
         .from("imported_metrics")
@@ -89,6 +93,7 @@ export async function POST(request: Request) {
         .in("type", ["build", "reality_check", "briefing", "weekly_reset"])
         .gte("date", twoWeeksAgo)
         .order("date", { ascending: false }),
+      supabase.from("profiles").select("main_goal").limit(1),
     ])
 
   const active =
@@ -116,8 +121,14 @@ export async function POST(request: Request) {
   )
   const focus = logs.find((l) => l.type === "weekly_reset")
 
+  const mainGoal =
+    profileRows?.[0]?.main_goal?.trim() ||
+    (workspaces?.find((w) => w.id === active?.id)?.goals ?? "").trim() ||
+    "-"
+
   const tiles = pulseTiles(metrics ?? [], todayDate)
   const prompt = [
+    `Founder's main goal: ${mainGoal}`,
     `Project: ${build?.name ?? "(none set)"} — type ${build?.business_type ?? "-"}, stage ${build?.stage ?? "-"}`,
     `Week goal: ${build?.week_goal ?? "-"}`,
     `Founder's planned next step: ${build?.next_action ?? "-"}`,

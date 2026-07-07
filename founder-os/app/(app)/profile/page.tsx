@@ -9,6 +9,8 @@ import { LanguageToggle } from "@/components/language-toggle"
 import { LogoutButton } from "@/components/logout-button"
 import { ProfileForm } from "@/components/profile-form"
 import { RemindersCard } from "@/components/reminders-card"
+import { WorkspaceSwitcher } from "@/components/workspace-switcher"
+import { getWorkspaces, resolveActiveWorkspace } from "@/lib/workspace"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { daysAgo } from "@/lib/dates"
 import { getT } from "@/lib/i18n-server"
@@ -43,6 +45,8 @@ export default async function ProfilePage() {
   const {
     data: { user },
   } = await supabase.auth.getUser()
+  const workspaces = await getWorkspaces()
+  const activeWorkspace = resolveActiveWorkspace(workspaces)!
 
   const [
     { data: profileRows },
@@ -199,6 +203,17 @@ export default async function ProfilePage() {
         </CardHeader>
         <CardContent className="space-y-3">
           <RemindersCard />
+          <div className="flex items-center justify-between rounded-xl border border-line px-4 py-2.5">
+            <span className="text-sm text-ink">{d.switcher.workspace}</span>
+            <WorkspaceSwitcher
+              workspaces={workspaces.map(({ id, name, status }) => ({
+                id,
+                name,
+                status,
+              }))}
+              activeId={activeWorkspace.id}
+            />
+          </div>
           <Link
             href="/connect"
             className="flex items-center justify-between rounded-xl border border-line px-4 py-3 text-sm transition-colors hover:bg-gold/[0.04]"

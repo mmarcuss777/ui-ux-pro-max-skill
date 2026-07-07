@@ -3,13 +3,8 @@ import { redirect } from "next/navigation"
 import { PersonIcon } from "@radix-ui/react-icons"
 
 import { AppNav, BottomNav } from "@/components/app-nav"
-import { HeaderSections } from "@/components/header-sections"
 import { WarmRoutes } from "@/components/warm-routes"
-import { LanguageToggle } from "@/components/language-toggle"
-import { LogoutButton } from "@/components/logout-button"
-import { MobileMenu } from "@/components/mobile-menu"
-import { WorkspaceSwitcher } from "@/components/workspace-switcher"
-import { getWorkspaces, resolveActiveWorkspace } from "@/lib/workspace"
+import { getWorkspaces } from "@/lib/workspace"
 
 export default async function AppLayout({
   children,
@@ -24,7 +19,6 @@ export default async function AppLayout({
   if (workspaces.length === 0) {
     redirect("/onboarding")
   }
-  const active = resolveActiveWorkspace(workspaces)!
 
   return (
     <div className="min-h-dvh">
@@ -37,38 +31,17 @@ export default async function AppLayout({
             <span className="gold-text">Nexa</span>
             <span className="text-gold-dark">.</span>
           </Link>
-          <div className="flex items-center gap-1">
-            <div className="hidden items-center gap-1.5 md:flex">
-              <LanguageToggle />
-              <WorkspaceSwitcher
-                workspaces={workspaces.map(({ id, name, status }) => ({
-                  id,
-                  name,
-                  status,
-                }))}
-                activeId={active.id}
-              />
-              <LogoutButton />
-            </div>
-            <HeaderSections />
-            {/* The operator's profile — rank, records, bars. */}
-            <Link
-              href="/profile"
-              prefetch={true}
-              aria-label="Profile"
-              className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full border border-gold/30 bg-gold/10 text-gold-dark transition-transform active:scale-90"
-            >
-              <PersonIcon className="h-4 w-4" />
-            </Link>
-            <MobileMenu
-              workspaces={workspaces.map(({ id, name, status }) => ({
-                id,
-                name,
-                status,
-              }))}
-              activeId={active.id}
-            />
-          </div>
+          {/* One entry on the right: the operator's profile. Everything
+              secondary (workspace, language, logout, sources) lives inside
+              it — the header itself stays two elements, always clean. */}
+          <Link
+            href="/profile"
+            prefetch={true}
+            aria-label="Profile"
+            className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full border border-gold/30 bg-gold/10 text-gold-dark transition-transform active:scale-90"
+          >
+            <PersonIcon className="h-4 w-4" />
+          </Link>
         </div>
         <AppNav />
       </header>

@@ -298,7 +298,7 @@ function durationToMinutes(raw: string): number {
   return Math.round(parts[0])
 }
 
-function CsvDialog({
+export function CsvDialog({
   workspaceId,
   kind,
 }: {
