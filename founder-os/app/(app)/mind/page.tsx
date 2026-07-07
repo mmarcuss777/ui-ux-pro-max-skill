@@ -1,3 +1,4 @@
+import { DeleteEntry } from "@/components/delete-entry"
 import { MindFormDialog } from "@/components/mind-form-dialog"
 import { ScreenTimeUploader } from "@/components/screen-time-uploader"
 import { WeekGrid } from "@/components/week-grid"
@@ -165,6 +166,7 @@ export default async function MindPage() {
                               {chips.join(" · ")}
                             </span>
                           )}
+                          <DeleteEntry table="logs" id={log.id} />
                         </div>
                         {(data.tomorrow || data.note) && data.lesson && (
                           <p className="pl-[4.5rem] text-xs text-muted-foreground">

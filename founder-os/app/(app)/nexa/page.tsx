@@ -1,4 +1,5 @@
 import { AskNexa } from "@/components/ask-nexa"
+import { DeleteEntry } from "@/components/delete-entry"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { daysAgo, shortDate, today } from "@/lib/dates"
 import { getT } from "@/lib/i18n-server"
@@ -43,16 +44,19 @@ export default async function NexaPage() {
                 const qa = (row.data ?? {}) as NexaQa
                 return (
                   <li key={row.id} className="space-y-1.5 py-3">
-                    <p className="flex items-baseline gap-2 text-sm font-medium text-ink">
-                      <span className="shrink-0 text-xs tabular-nums text-muted-foreground">
-                        {row.date === today()
-                          ? d.common.todayWord
-                          : row.date === daysAgo(1)
-                            ? d.common.yesterdayWord
-                            : shortDate(row.date, locale)}
-                      </span>
-                      <span className="min-w-0">{qa.question || "—"}</span>
-                    </p>
+                    <div className="flex items-baseline gap-2">
+                      <p className="flex min-w-0 flex-1 items-baseline gap-2 text-sm font-medium text-ink">
+                        <span className="shrink-0 text-xs tabular-nums text-muted-foreground">
+                          {row.date === today()
+                            ? d.common.todayWord
+                            : row.date === daysAgo(1)
+                              ? d.common.yesterdayWord
+                              : shortDate(row.date, locale)}
+                        </span>
+                        <span className="min-w-0">{qa.question || "—"}</span>
+                      </p>
+                      <DeleteEntry table="logs" id={row.id} />
+                    </div>
                     <details>
                       <summary className="cursor-pointer text-xs font-medium text-gold-dark">
                         {d.common.open}

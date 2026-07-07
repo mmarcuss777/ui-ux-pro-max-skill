@@ -1,3 +1,4 @@
+import { DeleteEntry } from "@/components/delete-entry"
 import { LogForm } from "@/components/log-form"
 import { Badge } from "@/components/ui/badge"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
@@ -62,9 +63,10 @@ export default async function LogPage() {
                   <Badge variant="outline" className="border-gold/30 text-gold-dark">
                     {tabLabel(log.type)}
                   </Badge>
-                  <span className="min-w-0 truncate text-sm text-muted-foreground">
+                  <span className="min-w-0 flex-1 truncate text-sm text-muted-foreground">
                     {logSummary(log)}
                   </span>
+                  <DeleteEntry table="logs" id={log.id} />
                 </li>
               ))}
             </ul>

@@ -1,5 +1,6 @@
 import { AddTransactionDialog } from "@/components/add-transaction-dialog"
 import { CashflowChart, type CashflowPoint } from "@/components/cashflow-chart"
+import { DeleteEntry } from "@/components/delete-entry"
 import { Badge } from "@/components/ui/badge"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { daysAgo, isoDate } from "@/lib/dates"
@@ -126,20 +127,23 @@ export default async function MoneyPage() {
                       )}
                     </p>
                   </div>
-                  <div className="text-right">
-                    <p
-                      className={
-                        transaction.type === "in"
-                          ? "text-sm font-medium tabular-nums text-ok"
-                          : "text-sm font-medium tabular-nums text-danger"
-                      }
-                    >
-                      {transaction.type === "in" ? "+" : "−"}
-                      {formatMoney(transaction.amount)}
-                    </p>
-                    <p className="text-xs tabular-nums text-muted-foreground">
-                      {formatMoney(balance)}
-                    </p>
+                  <div className="flex items-center gap-1.5">
+                    <div className="text-right">
+                      <p
+                        className={
+                          transaction.type === "in"
+                            ? "text-sm font-medium tabular-nums text-ok"
+                            : "text-sm font-medium tabular-nums text-danger"
+                        }
+                      >
+                        {transaction.type === "in" ? "+" : "−"}
+                        {formatMoney(transaction.amount)}
+                      </p>
+                      <p className="text-xs tabular-nums text-muted-foreground">
+                        {formatMoney(balance)}
+                      </p>
+                    </div>
+                    <DeleteEntry table="transactions" id={transaction.id} />
                   </div>
                 </li>
               ))}

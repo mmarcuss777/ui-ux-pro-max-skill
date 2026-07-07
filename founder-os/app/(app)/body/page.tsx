@@ -1,6 +1,7 @@
 import Link from "next/link"
 
 import { BodyGoalsCard } from "@/components/body-goals-card"
+import { DeleteEntry } from "@/components/delete-entry"
 import { WeekGrid } from "@/components/week-grid"
 import { PrimaryCta } from "@/components/primary-cta"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
@@ -133,9 +134,10 @@ export default async function BodyPage() {
                         ? d.common.yesterdayWord
                         : shortDate(log.date, locale)}
                   </span>
-                  <span className="min-w-0 truncate text-sm text-ink">
+                  <span className="min-w-0 flex-1 truncate text-sm text-ink">
                     {(log.data as { note?: string })?.note || "—"}
                   </span>
+                  <DeleteEntry table="logs" id={log.id} />
                 </li>
               ))}
             </ul>

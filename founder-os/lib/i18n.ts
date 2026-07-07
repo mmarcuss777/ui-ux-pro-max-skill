@@ -22,6 +22,7 @@ const en = {
     days: "days",
     todayWord: "Today",
     yesterdayWord: "Yesterday",
+    delete: "Delete",
   },
   nav: {
     today: "Today",
@@ -677,6 +678,7 @@ const sk: typeof en = {
     days: "dní",
     todayWord: "Dnes",
     yesterdayWord: "Včera",
+    delete: "Odstrániť",
   },
   nav: {
     today: "Dnes",
