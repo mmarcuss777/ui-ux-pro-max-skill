@@ -2,10 +2,15 @@ import type { SupabaseClient } from "@supabase/supabase-js"
 
 import { decryptToken, encryptToken } from "@/lib/crypto"
 import type { Json } from "@/types/db"
+import { githubSync } from "@/lib/connectors/github"
+import { lemonsqueezySync } from "@/lib/connectors/lemonsqueezy"
+import { mailchimpSync } from "@/lib/connectors/mailchimp"
 import { plausibleSync } from "@/lib/connectors/plausible"
+import { rescuetimeSync } from "@/lib/connectors/rescuetime"
 import { shopifySync } from "@/lib/connectors/shopify"
 import { stravaSync } from "@/lib/connectors/strava"
 import { stripeSync } from "@/lib/connectors/stripe"
+import { togglSync } from "@/lib/connectors/toggl"
 import type { SyncFn } from "@/lib/connectors/types"
 import type { Database } from "@/types/db"
 
@@ -17,6 +22,11 @@ const SYNC_FNS: Record<string, SyncFn> = {
   stripe: stripeSync,
   shopify: shopifySync,
   plausible: plausibleSync,
+  github: githubSync,
+  toggl: togglSync,
+  rescuetime: rescuetimeSync,
+  mailchimp: mailchimpSync,
+  lemonsqueezy: lemonsqueezySync,
 }
 
 // Runs one provider sync for one user: decrypt secrets → fetch → upsert

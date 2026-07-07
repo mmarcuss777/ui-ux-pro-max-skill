@@ -212,8 +212,13 @@ export function metricPillars(
       value("workouts") > 0 ||
       value("steps") >= 8000 ||
       value("active_minutes") >= 30,
+    mind:
+      value("focus_minutes") >= 25 || value("productive_minutes") >= 25,
     build:
-      value("orders") > 0 || value("revenue") > 0 || value("sessions") >= 25,
+      value("orders") > 0 ||
+      value("revenue") > 0 ||
+      value("sessions") >= 25 ||
+      value("commits") > 0,
     money: value("revenue") > 0 || Math.abs(value("net_cashflow")) > 0,
   }
 }
@@ -226,7 +231,10 @@ export function metricActionDates(metrics: MetricSlim[]): Set<string> {
       (m.metric === "workouts" && m.value > 0) ||
       (m.metric === "steps" && m.value >= 8000) ||
       (m.metric === "orders" && m.value > 0) ||
-      (m.metric === "revenue" && m.value > 0)
+      (m.metric === "revenue" && m.value > 0) ||
+      (m.metric === "commits" && m.value > 0) ||
+      (m.metric === "focus_minutes" && m.value >= 25) ||
+      (m.metric === "productive_minutes" && m.value >= 25)
     ) {
       dates.add(m.date)
     }

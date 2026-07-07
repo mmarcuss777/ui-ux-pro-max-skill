@@ -14,16 +14,32 @@ import {
 } from "@/components/ui/dialog"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
-import type { Provider } from "@/lib/connectors/registry"
+import {
+  KEY_PROVIDERS,
+  PROVIDER_NAMES,
+  type Provider,
+} from "@/lib/connectors/registry"
 import { createClient } from "@/lib/supabase/client"
 
 // Per-provider action row on the Connect page. Strava = OAuth redirect;
-// Stripe/Shopify/Plausible = paste-a-key dialog; CSV = client-side parse
-// with column mapping straight into transactions. Connected providers get
-// Sync now / Disconnect / Delete data.
+// key providers (Stripe, GitHub, Toggl, ...) = paste-a-key dialog;
+// CSV/Garmin = client-side parse with column mapping. Connected providers
+// get Sync now / Disconnect / Delete data.
 const EXTRA_FIELD: Partial<Record<Provider, "shopDomain" | "siteDomain">> = {
   shopify: "shopDomain",
   plausible: "siteDomain",
+}
+
+// Where the user finds the key — shown inside the connect dialog.
+const KEY_HINTS: Partial<Record<Provider, string>> = {
+  stripe: "dashboard.stripe.com → Developers → API keys (restricted, read-only)",
+  shopify: "Admin → Settings → Apps → Develop apps → Admin API access token",
+  plausible: "plausible.io → Settings → API keys",
+  github: "github.com → Settings → Developer settings → Personal access tokens",
+  toggl: "track.toggl.com → Profile settings → API token",
+  rescuetime: "rescuetime.com/anapi/manage → Create API key",
+  mailchimp: "Account → Extras → API keys",
+  lemonsqueezy: "app.lemonsqueezy.com → Settings → API",
 }
 
 export function ConnectActions({
@@ -65,12 +81,9 @@ export function ConnectActions({
             <a href="/api/integrations/strava/start">{d.connect.connectCta}</a>
           </Button>
         )}
-        {!isConnected &&
-          (provider === "stripe" ||
-            provider === "shopify" ||
-            provider === "plausible") && (
-            <KeyDialog provider={provider} onDone={() => router.refresh()} />
-          )}
+        {!isConnected && KEY_PROVIDERS.includes(provider) && (
+          <KeyDialog provider={provider} onDone={() => router.refresh()} />
+        )}
         {provider === "csv" && (
           <CsvDialog workspaceId={workspaceId} kind="money" />
         )}
@@ -169,9 +182,16 @@ function KeyDialog({
       </DialogTrigger>
       <DialogContent className="max-h-[85dvh] overflow-y-auto">
         <DialogHeader>
-          <DialogTitle className="text-ink capitalize">{provider}</DialogTitle>
+          <DialogTitle className="text-ink">
+            {PROVIDER_NAMES[provider]}
+          </DialogTitle>
         </DialogHeader>
         <form onSubmit={submit} className="space-y-4">
+          {KEY_HINTS[provider] && (
+            <p className="text-xs text-muted-foreground">
+              {KEY_HINTS[provider]}
+            </p>
+          )}
           {extraField && (
             <div className="space-y-2">
               <Label htmlFor="connect-extra">{d.connect[extraField]}</Label>

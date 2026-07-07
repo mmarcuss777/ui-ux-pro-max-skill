@@ -1,8 +1,13 @@
 import { NextResponse } from "next/server"
 
+import { githubValidate } from "@/lib/connectors/github"
+import { lemonsqueezyValidate } from "@/lib/connectors/lemonsqueezy"
+import { mailchimpValidate } from "@/lib/connectors/mailchimp"
 import { plausibleValidate } from "@/lib/connectors/plausible"
+import { rescuetimeValidate } from "@/lib/connectors/rescuetime"
 import { shopifyValidate } from "@/lib/connectors/shopify"
 import { stripeValidate } from "@/lib/connectors/stripe"
+import { togglValidate } from "@/lib/connectors/toggl"
 import { runSync } from "@/lib/connectors/sync-core"
 import type { ValidateKeyFn } from "@/lib/connectors/types"
 import { encryptToken } from "@/lib/crypto"
@@ -15,6 +20,11 @@ const VALIDATORS: Record<string, ValidateKeyFn> = {
   stripe: stripeValidate,
   shopify: shopifyValidate,
   plausible: plausibleValidate,
+  github: githubValidate,
+  toggl: togglValidate,
+  rescuetime: rescuetimeValidate,
+  mailchimp: mailchimpValidate,
+  lemonsqueezy: lemonsqueezyValidate,
 }
 
 // Key-paste connect for providers without OAuth friction: validate with

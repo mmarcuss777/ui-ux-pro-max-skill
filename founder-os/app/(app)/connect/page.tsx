@@ -1,4 +1,4 @@
-import { CONNECTORS, type Provider } from "@/lib/connectors/registry"
+import { CONNECTORS, PROVIDER_NAMES } from "@/lib/connectors/registry"
 import { ConnectActions } from "@/components/connect-actions"
 import { Badge } from "@/components/ui/badge"
 import { Card, CardContent } from "@/components/ui/card"
@@ -6,22 +6,12 @@ import { daysAgo } from "@/lib/dates"
 import { getT } from "@/lib/i18n-server"
 import {
   BODY_TYPES,
+  MIND_TYPES,
   metricActionDates,
   type MetricSlim,
 } from "@/lib/stats"
 import { createClient } from "@/lib/supabase/server"
 import { getWorkspaces, resolveActiveWorkspace } from "@/lib/workspace"
-
-const PROVIDER_NAMES: Record<Provider, string> = {
-  csv: "CSV / Google Sheets",
-  strava: "Strava",
-  apple_health: "Apple Health",
-  stripe: "Stripe",
-  shopify: "Shopify",
-  plausible: "Plausible",
-  ga4: "Google Analytics",
-  garmin: "Garmin",
-}
 
 // Connect Data: the single place where external sources live. Cards show
 // state + exactly what gets imported; the top panel shows what Nexa
@@ -55,16 +45,33 @@ export default async function ConnectPage() {
       .filter((m) => m.metric === "workouts" && m.value > 0)
       .map((m) => m.date),
   ]).size
+  const mindDays = new Set([
+    ...logs.filter((l) => MIND_TYPES.includes(l.type)).map((l) => l.date),
+    ...metrics
+      .filter(
+        (m) =>
+          (m.metric === "focus_minutes" || m.metric === "productive_minutes") &&
+          m.value >= 25
+      )
+      .map((m) => m.date),
+  ]).size
   const buildDays = new Set([
     ...logs.filter((l) => l.type === "build").map((l) => l.date),
     ...metrics
-      .filter((m) => (m.metric === "orders" || m.metric === "revenue") && m.value > 0)
+      .filter(
+        (m) =>
+          (m.metric === "orders" ||
+            m.metric === "revenue" ||
+            m.metric === "commits") &&
+          m.value > 0
+      )
       .map((m) => m.date),
   ]).size
   const moneyDays = new Set((weekTx ?? []).map((t) => t.date)).size
   const hasAnything = rows.length > 0 || metrics.length > 0
   const learned = [
     `${d.pillars.body} · ${bodyDays}/7 ${d.review.daysActive}`,
+    `${d.pillars.mind} · ${mindDays}/7 ${d.review.daysActive}`,
     `${d.pillars.build} · ${buildDays}/7 ${d.review.daysActive}`,
     `${d.pillars.money} · ${moneyDays}/7 ${d.review.daysActive}`,
   ]
@@ -115,10 +122,7 @@ export default async function ConnectPage() {
           const row = rows.find((r) => r.provider === connector.provider)
           const isConnected = row?.status === "connected"
           const hasError = row?.status === "error"
-          const isReady = ![
-            "apple_health",
-            "ga4",
-          ].includes(connector.provider)
+          const isReady = connector.availability === "ready"
           return (
             <Card key={connector.provider}>
               <CardContent className="space-y-2.5 p-4">
