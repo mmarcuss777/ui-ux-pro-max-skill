@@ -113,6 +113,56 @@ export function streak(dates: Set<string>): number {
   return count
 }
 
+// Each fully active past week (Mon–Sun, 7/7 days) earns one streak
+// shield, capped at two. Checked over the last four completed weeks.
+export function earnedShields(dates: Set<string>): number {
+  let count = 0
+  const thisMonday = new Date()
+  thisMonday.setDate(thisMonday.getDate() - ((thisMonday.getDay() + 6) % 7))
+  for (let week = 1; week <= 4; week++) {
+    let full = true
+    for (let i = 0; i < 7; i++) {
+      const day = new Date(thisMonday)
+      day.setDate(day.getDate() - 7 * week + i)
+      if (!dates.has(isoDate(day))) {
+        full = false
+        break
+      }
+    }
+    if (full) count++
+  }
+  return Math.min(2, count)
+}
+
+// Streak with shields: a shield silently covers ONE missed day (never two
+// in a row) so a single bad day can't kill the chain — Duolingo's
+// streak-freeze insight: easier streaks retain longer. Pure function of
+// history; nothing to store.
+export function streakWithShields(dates: Set<string>): {
+  streak: number
+  shieldsLeft: number
+} {
+  let shieldsLeft = earnedShields(dates)
+  let count = 0
+  let index = dates.has(today()) ? 0 : 1
+  for (;;) {
+    const date = daysAgo(index)
+    if (dates.has(date)) {
+      count++
+      index++
+    } else if (shieldsLeft > 0 && dates.has(daysAgo(index + 1))) {
+      // Gap of exactly one day with the chain continuing behind it —
+      // consume a shield and keep counting.
+      shieldsLeft--
+      count++
+      index++
+    } else {
+      break
+    }
+  }
+  return { streak: count, shieldsLeft }
+}
+
 // The last 7 days, oldest first, marked active/inactive.
 export function weekGrid(dates: Set<string>): { date: string; active: boolean }[] {
   const grid: { date: string; active: boolean }[] = []

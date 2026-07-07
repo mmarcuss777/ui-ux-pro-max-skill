@@ -7,6 +7,8 @@ import {
   TargetIcon,
 } from "@radix-ui/react-icons"
 
+import { Greeting } from "@/components/greeting"
+import { MinimumDay } from "@/components/minimum-day"
 import { RemindersCard } from "@/components/reminders-card"
 
 import { CloseDayCard } from "@/components/close-day-card"
@@ -30,7 +32,7 @@ import {
   dayStarted,
   pillarComplete,
   pillarEvidence,
-  streak,
+  streakWithShields,
   type Pillar,
 } from "@/lib/stats"
 import { createClient } from "@/lib/supabase/server"
@@ -121,7 +123,13 @@ export default async function TodayPage() {
   const score = dailyScore(complete)
   const pillarsDone = Object.values(complete).filter(Boolean).length
   const started = dayStarted(todayLogs, todayTx)
-  const streakDays = streak(actionDates(monthLogs, txDates))
+  const allDates = actionDates(monthLogs, txDates)
+  const { streak: streakDays, shieldsLeft } = streakWithShields(allDates)
+  // Streak just fell, but there was life in the last week — fresh-start
+  // framing instead of an empty zero ("never miss twice").
+  const recentlyActive = [1, 2, 3, 4, 5, 6, 7].some((n) =>
+    allDates.has(daysAgo(n))
+  )
   const overdueCount = overdueExperiments?.length ?? 0
   // A streak milestone reached today deserves its own line.
   const milestone = [100, 30, 7].find((m) => streakDays === m) ?? null
@@ -132,6 +140,7 @@ export default async function TodayPage() {
         <div>
           <h1 className="text-2xl font-bold text-ink">{d.today.title}</h1>
           <p className="text-sm text-muted-foreground">
+            <Greeting />
             {new Date().toLocaleDateString(
               locale === "sk" ? "sk-SK" : "en-GB",
               { weekday: "long", day: "numeric", month: "long" }
@@ -142,6 +151,11 @@ export default async function TodayPage() {
           <span className="flex items-center gap-1.5 rounded-full border border-gold/30 bg-gold/10 px-3 py-1.5 text-xs font-semibold text-gold-dark">
             <LightningBoltIcon className="h-3.5 w-3.5" />
             {d.today.streak}: {daysLabel(streakDays, locale)}
+            {shieldsLeft > 0 && (
+              <span className="rounded-full bg-gold/20 px-1.5 text-[10px] font-bold tabular-nums">
+                {shieldsLeft}× {d.today.shieldWord}
+              </span>
+            )}
           </span>
         )}
       </div>
@@ -149,9 +163,18 @@ export default async function TodayPage() {
       {/* Streak at risk: the loudest line on the page until the first
           action lands. Milestones: the payoff for keeping it. */}
       {!started && streakDays > 0 && (
-        <p className="rounded-xl border border-danger/30 bg-danger/[0.06] px-3.5 py-2.5 text-sm font-medium text-danger">
-          {d.today.streakRisk}
-        </p>
+        <div className="space-y-2.5 rounded-xl border border-danger/30 bg-danger/[0.06] px-3.5 py-2.5">
+          <p className="text-sm font-medium text-danger">
+            {d.today.streakRisk}
+          </p>
+          <MinimumDay workspaceId={active.id} />
+        </div>
+      )}
+      {!started && streakDays === 0 && recentlyActive && (
+        <div className="space-y-2.5 rounded-xl border border-gold/30 bg-gold/[0.07] px-3.5 py-2.5">
+          <p className="text-sm font-medium text-ink">{d.today.freshStart}</p>
+          <MinimumDay workspaceId={active.id} />
+        </div>
       )}
       {started && milestone && (
         <p className="animate-pop gold-fill rounded-xl px-3.5 py-2.5 text-sm font-semibold">
