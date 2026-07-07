@@ -1,7 +1,7 @@
 import Link from "next/link"
 import { redirect } from "next/navigation"
 
-import { AppNav, BottomNav } from "@/components/app-nav"
+import { AppNav, BottomNav, MobileQuickNav } from "@/components/app-nav"
 import { LanguageToggle } from "@/components/language-toggle"
 import { LogoutButton } from "@/components/logout-button"
 import { MobileMenu } from "@/components/mobile-menu"
@@ -56,6 +56,7 @@ export default async function AppLayout({
           />
         </div>
         <AppNav />
+        <MobileQuickNav />
       </header>
       {/* Bottom padding clears the fixed mobile dock (its height + the
           device safe-area inset) so nothing hides behind it. Desktop has
