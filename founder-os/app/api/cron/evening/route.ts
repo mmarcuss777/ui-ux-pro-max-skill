@@ -2,7 +2,7 @@ import { createClient } from "@supabase/supabase-js"
 import { NextResponse } from "next/server"
 import webpush from "web-push"
 
-import { today } from "@/lib/dates"
+import { today, weekStart } from "@/lib/dates"
 import type { Database } from "@/types/db"
 
 export const dynamic = "force-dynamic"
@@ -19,6 +19,20 @@ const MESSAGES = {
   sk: {
     title: "Uzavri deň",
     body: "Séria žije, len ak ju držíš. Deväťdesiat sekúnd.",
+  },
+} as const
+
+// On Sundays the evening nudge becomes the Weekly Review nudge for anyone
+// who hasn't done this week's review (Vercel Hobby caps us at two cron
+// jobs, so the weekly reminder rides along here).
+const SUNDAY_MESSAGES = {
+  en: {
+    title: "Weekly Review",
+    body: "Three minutes. Close the week, set the next one.",
+  },
+  sk: {
+    title: "Týždenné review",
+    body: "Tri minúty. Uzavri týždeň, nastav ďalší.",
   },
 } as const
 
@@ -42,23 +56,32 @@ export async function GET(request: Request) {
     { auth: { persistSession: false } }
   )
 
-  const [{ data: subscriptions }, { data: closedRows }] = await Promise.all([
+  const isSunday = new Date().getDay() === 0
+
+  const [{ data: subscriptions }, { data: doneRows }] = await Promise.all([
     admin.from("push_subscriptions").select("*"),
-    admin
-      .from("logs")
-      .select("user_id")
-      .eq("type", "close_day")
-      .eq("date", today()),
+    isSunday
+      ? admin
+          .from("logs")
+          .select("user_id")
+          .eq("type", "weekly_reset")
+          .gte("date", weekStart())
+      : admin
+          .from("logs")
+          .select("user_id")
+          .eq("type", "close_day")
+          .eq("date", today()),
   ])
 
-  const closed = new Set((closedRows ?? []).map((r) => r.user_id))
-  const targets = (subscriptions ?? []).filter((s) => !closed.has(s.user_id))
+  const done = new Set((doneRows ?? []).map((r) => r.user_id))
+  const targets = (subscriptions ?? []).filter((s) => !done.has(s.user_id))
+  const pack = isSunday ? SUNDAY_MESSAGES : MESSAGES
 
   let sent = 0
   const dead: string[] = []
   await Promise.all(
     targets.map(async (sub) => {
-      const message = MESSAGES[sub.locale === "sk" ? "sk" : "en"]
+      const message = pack[sub.locale === "sk" ? "sk" : "en"]
       try {
         await webpush.sendNotification(
           {
@@ -79,5 +102,5 @@ export async function GET(request: Request) {
     await admin.from("push_subscriptions").delete().in("endpoint", dead)
   }
 
-  return NextResponse.json({ sent, skipped: closed.size, removed: dead.length })
+  return NextResponse.json({ sent, skipped: done.size, removed: dead.length })
 }

@@ -30,6 +30,8 @@ import {
   actionDates,
   dailyScore,
   dayStarted,
+  metricActionDates,
+  metricPillars,
   pillarComplete,
   pillarEvidence,
   streakWithShields,
@@ -62,6 +64,7 @@ export default async function TodayPage() {
     { data: transactions },
     { data: builds },
     { data: overdueExperiments },
+    { data: metricRows },
   ] = await Promise.all([
     supabase.from("logs").select("*").eq("date", todayDate),
     supabase.from("logs").select("date,type").gte("date", monthAgo),
@@ -86,6 +89,10 @@ export default async function TodayPage() {
       .neq("status", "decided")
       .not("deadline", "is", null)
       .lt("deadline", todayDate),
+    supabase
+      .from("imported_metrics")
+      .select("date,metric,value")
+      .gte("date", monthAgo),
   ])
 
   const todayLogs: Log[] = todayRows ?? []
@@ -118,12 +125,25 @@ export default async function TodayPage() {
     ((lastReset?.data as WeeklyResetData | undefined)?.focus ?? "").trim() ||
     null
 
-  const evidence = pillarEvidence(todayLogs, todayTx)
+  // Imported metrics light pillars and extend the streak exactly like
+  // manual logs — the day counts even before anything is typed by hand.
+  const metrics = metricRows ?? []
+  const fromMetrics = metricPillars(metrics, todayDate)
+  const manualEvidence = pillarEvidence(todayLogs, todayTx)
+  const evidence = {
+    body: manualEvidence.body || fromMetrics.body === true,
+    mind: manualEvidence.mind,
+    build: manualEvidence.build || fromMetrics.build === true,
+    money: manualEvidence.money || fromMetrics.money === true,
+  }
   const complete = pillarComplete(mission, evidence)
   const score = dailyScore(complete)
   const pillarsDone = Object.values(complete).filter(Boolean).length
-  const started = dayStarted(todayLogs, todayTx)
+  const started =
+    dayStarted(todayLogs, todayTx) ||
+    Object.values(fromMetrics).some(Boolean)
   const allDates = actionDates(monthLogs, txDates)
+  metricActionDates(metrics).forEach((date) => allDates.add(date))
   const { streak: streakDays, shieldsLeft } = streakWithShields(allDates)
   // Streak just fell, but there was life in the last week — fresh-start
   // framing instead of an empty zero ("never miss twice").

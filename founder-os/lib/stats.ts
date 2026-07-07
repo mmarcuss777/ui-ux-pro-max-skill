@@ -195,6 +195,45 @@ export function weekPillarDays(
   return dates.size
 }
 
+// ---- Imported metrics (integrations) ---------------------------------
+// External data lights pillars the same way manual logs do, so the day
+// counts even when nothing was typed by hand.
+
+export type MetricSlim = { date: string; metric: string; value: number }
+
+export function metricPillars(
+  metrics: MetricSlim[],
+  date: string
+): Partial<Record<Pillar, boolean>> {
+  const day = metrics.filter((m) => m.date === date)
+  const value = (name: string) => day.find((m) => m.metric === name)?.value ?? 0
+  return {
+    body:
+      value("workouts") > 0 ||
+      value("steps") >= 8000 ||
+      value("active_minutes") >= 30,
+    build:
+      value("orders") > 0 || value("revenue") > 0 || value("sessions") >= 25,
+    money: value("revenue") > 0 || Math.abs(value("net_cashflow")) > 0,
+  }
+}
+
+// Days on which imported data alone proves real action (for streaks).
+export function metricActionDates(metrics: MetricSlim[]): Set<string> {
+  const dates = new Set<string>()
+  for (const m of metrics) {
+    if (
+      (m.metric === "workouts" && m.value > 0) ||
+      (m.metric === "steps" && m.value >= 8000) ||
+      (m.metric === "orders" && m.value > 0) ||
+      (m.metric === "revenue" && m.value > 0)
+    ) {
+      dates.add(m.date)
+    }
+  }
+  return dates
+}
+
 // Weekly pillar score: active days out of 7, expressed as 0-10.
 export function weekPillarScore(activeDays: number): number {
   return Math.round((Math.min(activeDays, 7) / 7) * 10)

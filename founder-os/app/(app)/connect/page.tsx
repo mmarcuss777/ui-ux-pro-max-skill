@@ -1,9 +1,16 @@
 import { CONNECTORS, type Provider } from "@/lib/connectors/registry"
+import { ConnectActions } from "@/components/connect-actions"
 import { Badge } from "@/components/ui/badge"
-import { Button } from "@/components/ui/button"
 import { Card, CardContent } from "@/components/ui/card"
+import { daysAgo } from "@/lib/dates"
 import { getT } from "@/lib/i18n-server"
+import {
+  BODY_TYPES,
+  metricActionDates,
+  type MetricSlim,
+} from "@/lib/stats"
 import { createClient } from "@/lib/supabase/server"
+import { getWorkspaces, resolveActiveWorkspace } from "@/lib/workspace"
 
 const PROVIDER_NAMES: Record<Provider, string> = {
   csv: "CSV / Google Sheets",
@@ -22,11 +29,45 @@ const PROVIDER_NAMES: Record<Provider, string> = {
 export default async function ConnectPage() {
   const supabase = createClient()
   const { d, locale } = getT()
+  const workspaces = await getWorkspaces()
+  const active = resolveActiveWorkspace(workspaces)!
+  const weekAgo = daysAgo(6)
 
-  // Tolerates a missing table (pre-migration) — everything renders as
-  // not connected until 0006 runs.
-  const { data } = await supabase.from("integrations").select("*")
+  const [{ data }, { data: weekLogs }, { data: weekTx }, { data: weekMetrics }] =
+    await Promise.all([
+      supabase.from("integrations").select("*"),
+      supabase.from("logs").select("date,type").gte("date", weekAgo),
+      supabase.from("transactions").select("date").gte("date", weekAgo),
+      supabase
+        .from("imported_metrics")
+        .select("date,metric,value")
+        .gte("date", weekAgo),
+    ])
   const rows = data ?? []
+  const metrics: MetricSlim[] = weekMetrics ?? []
+
+  // "Nexa learned this week" — three plain sentences, not fifty charts.
+  const logs = weekLogs ?? []
+  const metricDays = metricActionDates(metrics)
+  const bodyDays = new Set([
+    ...logs.filter((l) => BODY_TYPES.includes(l.type)).map((l) => l.date),
+    ...metrics
+      .filter((m) => m.metric === "workouts" && m.value > 0)
+      .map((m) => m.date),
+  ]).size
+  const buildDays = new Set([
+    ...logs.filter((l) => l.type === "build").map((l) => l.date),
+    ...metrics
+      .filter((m) => (m.metric === "orders" || m.metric === "revenue") && m.value > 0)
+      .map((m) => m.date),
+  ]).size
+  const moneyDays = new Set((weekTx ?? []).map((t) => t.date)).size
+  const hasAnything = rows.length > 0 || metrics.length > 0
+  const learned = [
+    `${d.pillars.body} · ${bodyDays}/7 ${d.review.daysActive}`,
+    `${d.pillars.build} · ${buildDays}/7 ${d.review.daysActive}`,
+    `${d.pillars.money} · ${moneyDays}/7 ${d.review.daysActive}`,
+  ]
 
   const metricLabel = (key: string): string => {
     const dict = d.connect as unknown as Record<string, string>
@@ -49,9 +90,23 @@ export default async function ConnectPage() {
           <p className="text-xs font-semibold uppercase tracking-wider text-gold-dark">
             {d.connect.learnedTitle}
           </p>
-          <p className="mt-2 text-sm text-muted-foreground">
-            {d.connect.learnedEmpty}
-          </p>
+          {hasAnything ? (
+            <ul className="mt-2 space-y-1 text-sm text-ink">
+              {learned.map((line) => (
+                <li key={line}>{line}</li>
+              ))}
+              {metricDays.size > 0 && (
+                <li className="text-muted-foreground">
+                  {d.connect.importsLabel}: {metricDays.size}/7{" "}
+                  {d.review.daysActive}
+                </li>
+              )}
+            </ul>
+          ) : (
+            <p className="mt-2 text-sm text-muted-foreground">
+              {d.connect.learnedEmpty}
+            </p>
+          )}
         </CardContent>
       </Card>
 
@@ -59,7 +114,13 @@ export default async function ConnectPage() {
         {CONNECTORS.map((connector) => {
           const row = rows.find((r) => r.provider === connector.provider)
           const isConnected = row?.status === "connected"
-          const isReady = connector.availability === "ready"
+          const hasError = row?.status === "error"
+          const isReady =
+            connector.availability === "ready" ||
+            connector.provider === "strava" ||
+            connector.provider === "stripe" ||
+            connector.provider === "shopify" ||
+            connector.provider === "plausible"
           return (
             <Card key={connector.provider}>
               <CardContent className="space-y-2.5 p-4">
@@ -68,7 +129,10 @@ export default async function ConnectPage() {
                     <p className="truncate text-sm font-semibold text-ink">
                       {PROVIDER_NAMES[connector.provider]}
                     </p>
-                    <Badge variant="outline" className="shrink-0 border-gold/30 text-[10px] text-gold-dark">
+                    <Badge
+                      variant="outline"
+                      className="shrink-0 border-gold/30 text-[10px] text-gold-dark"
+                    >
                       {d.pillars[connector.pillar]}
                     </Badge>
                   </div>
@@ -76,7 +140,9 @@ export default async function ConnectPage() {
                     className={
                       isConnected
                         ? "shrink-0 text-xs font-semibold text-ok"
-                        : "shrink-0 text-xs text-muted-foreground"
+                        : hasError
+                          ? "shrink-0 text-xs font-semibold text-danger"
+                          : "shrink-0 text-xs text-muted-foreground"
                     }
                   >
                     {isConnected
@@ -85,9 +151,11 @@ export default async function ConnectPage() {
                             ? ` · ${d.connect.lastSync} ${new Date(row.last_sync_at).toLocaleTimeString(locale === "sk" ? "sk-SK" : "en-GB", { hour: "2-digit", minute: "2-digit" })}`
                             : ""
                         }`
-                      : isReady
-                        ? d.connect.notConnected
-                        : d.connect.comingSoon}
+                      : hasError
+                        ? (row?.error ?? d.common.error).slice(0, 60)
+                        : isReady
+                          ? d.connect.notConnected
+                          : d.connect.comingSoon}
                   </span>
                 </div>
 
@@ -97,27 +165,11 @@ export default async function ConnectPage() {
                 </p>
 
                 {isReady && (
-                  <div className="flex flex-wrap gap-2 pt-1">
-                    <Button variant="outline" size="sm" className="h-9" disabled>
-                      {connector.provider === "csv"
-                        ? d.connect.importCta
-                        : d.connect.connectCta}
-                    </Button>
-                    {isConnected && (
-                      <>
-                        <Button variant="ghost" size="sm" className="h-9">
-                          {d.connect.disconnect}
-                        </Button>
-                        <Button
-                          variant="ghost"
-                          size="sm"
-                          className="h-9 text-danger hover:text-danger"
-                        >
-                          {d.connect.deleteData}
-                        </Button>
-                      </>
-                    )}
-                  </div>
+                  <ConnectActions
+                    provider={connector.provider}
+                    isConnected={isConnected || hasError}
+                    workspaceId={active.id}
+                  />
                 )}
               </CardContent>
             </Card>

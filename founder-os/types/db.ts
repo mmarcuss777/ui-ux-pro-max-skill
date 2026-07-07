@@ -279,6 +279,30 @@ export type Database = {
         }
         Relationships: []
       }
+      integration_secrets: {
+        Row: {
+          integration_id: string
+          access_token_enc: string | null
+          refresh_token_enc: string | null
+          expires_at: string | null
+          updated_at: string
+        }
+        Insert: {
+          integration_id: string
+          access_token_enc?: string | null
+          refresh_token_enc?: string | null
+          expires_at?: string | null
+          updated_at?: string
+        }
+        Update: {
+          integration_id?: string
+          access_token_enc?: string | null
+          refresh_token_enc?: string | null
+          expires_at?: string | null
+          updated_at?: string
+        }
+        Relationships: []
+      }
       imported_metrics: {
         Row: {
           id: string

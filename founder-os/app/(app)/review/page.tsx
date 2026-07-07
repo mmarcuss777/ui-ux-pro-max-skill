@@ -13,10 +13,13 @@ import {
   MIND_TYPES,
   actionDates,
   dailyScore,
+  metricActionDates,
+  metricPillars,
   pillarComplete,
   pillarEvidenceFor,
   streakWithShields,
   weekPillarScore,
+  type MetricSlim,
 } from "@/lib/stats"
 import { createClient } from "@/lib/supabase/server"
 import { getWorkspaces, resolveActiveWorkspace } from "@/lib/workspace"
@@ -29,12 +32,6 @@ type DailyData = {
   top_action?: string
   top_action_done?: boolean
   lesson?: string
-}
-
-function activeDays(logs: Log[], types: string[]): number {
-  return new Set(
-    logs.filter((l) => types.includes(l.type)).map((l) => l.date)
-  ).size
 }
 
 function buildSummary(
@@ -131,6 +128,7 @@ export default async function ReviewPage() {
     { data: monthTx },
     { data: historyRows },
     { data: historyTx },
+    { data: monthMetricRows },
   ] = await Promise.all([
     supabase
       .from("logs")
@@ -177,6 +175,10 @@ export default async function ReviewPage() {
     // perfect-week trophies live on long memory, not one month.
     supabase.from("logs").select("date,type").gte("date", halfYearAgo),
     supabase.from("transactions").select("date").gte("date", halfYearAgo),
+    supabase
+      .from("imported_metrics")
+      .select("date,metric,value")
+      .gte("date", monthAgo),
   ])
 
   const weekLogs: Log[] = logs ?? []
@@ -187,7 +189,20 @@ export default async function ReviewPage() {
     ? ((resetRow.data ?? {}) as WeeklyResetData)
     : null
 
-  const bodyDays = activeDays(weekLogs, BODY_TYPES)
+  // Imported metrics count toward weekly pillar days like manual logs.
+  const monthMetrics: MetricSlim[] = monthMetricRows ?? []
+  const weekMetrics = monthMetrics.filter((m) => m.date >= weekAgo)
+  const metricDays = (pillar: "body" | "build" | "money") =>
+    new Set(
+      weekMetrics
+        .filter((m) => metricPillars(weekMetrics, m.date)[pillar] === true)
+        .map((m) => m.date)
+    )
+
+  const bodyDays = new Set([
+    ...weekLogs.filter((l) => BODY_TYPES.includes(l.type)).map((l) => l.date),
+    ...Array.from(metricDays("body")),
+  ]).size
   // Mind counts journal entries AND close-day rows with a written lesson —
   // the same rule the daily score uses.
   const mindDays = new Set(
@@ -200,17 +215,21 @@ export default async function ReviewPage() {
       )
       .map((l) => l.date)
   ).size
-  const buildDays = new Set(
-    weekLogs
+  const buildDays = new Set([
+    ...weekLogs
       .filter(
         (l) =>
           l.type === "build" ||
           (l.type === "daily" &&
             (l.data as DailyData)?.top_action_done === true)
       )
-      .map((l) => l.date)
-  ).size
-  const moneyDays = new Set(weekTx.map((t) => t.date)).size
+      .map((l) => l.date),
+    ...Array.from(metricDays("build")),
+  ]).size
+  const moneyDays = new Set([
+    ...weekTx.map((t) => t.date),
+    ...Array.from(metricDays("money")),
+  ]).size
 
   const scores = {
     body: weekPillarScore(bodyDays),
@@ -240,10 +259,17 @@ export default async function ReviewPage() {
       (r) => r.date === date && r.type === "mission"
     )
     const mission = (missionRow?.data ?? null) as MissionData | null
+    const manual = pillarEvidenceFor(date, trendRows, trendTx)
+    const imported = metricPillars(monthMetrics, date)
     trendPoints.push({
       date,
       score: dailyScore(
-        pillarComplete(mission, pillarEvidenceFor(date, trendRows, trendTx))
+        pillarComplete(mission, {
+          body: manual.body || imported.body === true,
+          mind: manual.mind,
+          build: manual.build || imported.build === true,
+          money: manual.money || imported.money === true,
+        })
       ),
     })
   }
@@ -251,6 +277,7 @@ export default async function ReviewPage() {
   // Identity block: long-memory numbers that survive any broken streak.
   const history = historyRows ?? []
   const historyDates = actionDates(history, historyTx ?? [])
+  metricActionDates(monthMetrics).forEach((date) => historyDates.add(date))
   const evidenceCount = history.filter((r) =>
     ACTION_LOG_TYPES.includes(r.type)
   ).length
