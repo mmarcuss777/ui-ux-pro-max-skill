@@ -50,6 +50,7 @@ export function AppNav() {
           <Link
             key={link.href}
             href={link.href}
+            prefetch={true}
             aria-current={isActive ? "page" : undefined}
             className={cn(
               "flex h-9 shrink-0 items-center rounded-full px-4 text-sm font-medium transition-colors",
@@ -83,6 +84,7 @@ export function BottomNav() {
     return (
       <Link
         href={link.href}
+        prefetch={true}
         aria-current={isActive ? "page" : undefined}
         className={cn(
           "flex min-h-[3.75rem] flex-col items-center justify-center gap-1 text-[10px] font-medium transition-all duration-200 ease-spring active:scale-95",
@@ -121,6 +123,7 @@ export function BottomNav() {
         <div className="flex items-center justify-center">
           <Link
             href="/log"
+            prefetch={true}
             aria-label={d.nav.log}
             aria-current={pathname.startsWith("/log") ? "page" : undefined}
             className={cn(

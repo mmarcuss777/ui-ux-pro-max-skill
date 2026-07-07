@@ -370,6 +370,7 @@ export default async function TodayPage() {
           <Link
             key={href}
             href={href}
+            prefetch={true}
             className="surface flex flex-col items-center gap-1.5 px-2 py-3.5 text-center active:scale-95"
           >
             <Icon className="h-5 w-5 text-gold-dark" />

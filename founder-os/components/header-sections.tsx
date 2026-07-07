@@ -30,6 +30,7 @@ export function HeaderSections() {
           <Link
             key={href}
             href={href}
+            prefetch={true}
             aria-label={label}
             aria-current={isActive ? "page" : undefined}
             className={cn(
