@@ -80,6 +80,7 @@ export function MindFormDialog({ workspaceId }: { workspaceId: string }) {
     setTomorrow("")
     setOpen(false)
     router.refresh()
+    router.prefetch("/dashboard")
   }
 
   return (

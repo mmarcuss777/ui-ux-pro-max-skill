@@ -47,25 +47,26 @@ const PILLAR_KEYS: Pillar[] = ["body", "mind", "build", "money"]
 export default async function TodayPage() {
   const supabase = createClient()
   const { locale, d } = getT()
-  const workspaces = await getWorkspaces()
-  const active = resolveActiveWorkspace(workspaces)!
   const todayDate = today()
   // A month of history feeds the streak; today's slice feeds the score.
   const monthAgo = daysAgo(29)
 
-  // Slim payloads: today's rows in full (the score needs their data), a
-  // month of bare date+type pairs for the streak, and only the last week
-  // of close/reset rows (suggestion + week focus). Fetching a month of
-  // full jsonb rows was the heaviest part of this page.
+  // ONE round trip for the whole page: workspaces run inside the same
+  // Promise.all, and builds/experiments are fetched user-wide (RLS scopes
+  // them anyway) then filtered by the active workspace in memory — the
+  // old workspaces→queries waterfall doubled time-to-content on the
+  // heaviest page in the app.
   const [
+    workspaces,
     { data: todayRows },
     { data: monthMeta },
     { data: recentSpecial },
     { data: transactions },
-    { data: builds },
-    { data: overdueExperiments },
+    { data: allBuilds },
+    { data: allOverdue },
     { data: metricRows },
   ] = await Promise.all([
+    getWorkspaces(),
     supabase.from("logs").select("*").eq("date", todayDate),
     supabase.from("logs").select("date,type").gte("date", monthAgo),
     supabase
@@ -78,14 +79,11 @@ export default async function TodayPage() {
     supabase
       .from("builds")
       .select("*")
-      .eq("workspace_id", active.id)
       .eq("status", "active")
-      .order("created_at", { ascending: false })
-      .limit(1),
+      .order("created_at", { ascending: false }),
     supabase
       .from("experiments")
-      .select("id")
-      .eq("workspace_id", active.id)
+      .select("id,workspace_id")
       .neq("status", "decided")
       .not("deadline", "is", null)
       .lt("deadline", todayDate),
@@ -94,13 +92,18 @@ export default async function TodayPage() {
       .select("date,metric,value")
       .gte("date", monthAgo),
   ])
+  const active = resolveActiveWorkspace(workspaces)!
 
   const todayLogs: Log[] = todayRows ?? []
   const monthLogs = monthMeta ?? []
   const specialLogs: Log[] = recentSpecial ?? []
   const txDates = transactions ?? []
   const todayTx = txDates.filter((t) => t.date === todayDate)
-  const build = builds?.[0] ?? null
+  const build =
+    (allBuilds ?? []).find((b) => b.workspace_id === active.id) ?? null
+  const overdueExperiments = (allOverdue ?? []).filter(
+    (e) => e.workspace_id === active.id
+  )
 
   const missionRow = todayLogs.find((l) => l.type === "mission") ?? null
   const mission = missionRow ? ((missionRow.data ?? {}) as MissionData) : null

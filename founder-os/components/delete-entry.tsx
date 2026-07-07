@@ -61,6 +61,7 @@ export function DeleteEntry({
       return
     }
     router.refresh()
+    router.prefetch("/dashboard")
   }
 
   return (

@@ -248,6 +248,7 @@ export function LogForm({ workspaceId }: { workspaceId: string }) {
     setFeedback(await computeFeedback(supabase, newLogId, newTxId))
     setSaving(false)
     router.refresh()
+    router.prefetch("/dashboard")
   }
 
   const noteLabel =

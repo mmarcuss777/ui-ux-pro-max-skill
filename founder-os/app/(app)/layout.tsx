@@ -3,6 +3,7 @@ import { redirect } from "next/navigation"
 
 import { AppNav, BottomNav } from "@/components/app-nav"
 import { HeaderSections } from "@/components/header-sections"
+import { WarmRoutes } from "@/components/warm-routes"
 import { LanguageToggle } from "@/components/language-toggle"
 import { LogoutButton } from "@/components/logout-button"
 import { MobileMenu } from "@/components/mobile-menu"
@@ -70,6 +71,7 @@ export default async function AppLayout({
         {children}
       </main>
       <BottomNav />
+      <WarmRoutes />
     </div>
   )
 }

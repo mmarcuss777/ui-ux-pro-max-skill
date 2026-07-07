@@ -85,6 +85,7 @@ export function AddTransactionDialog({ workspaceId }: { workspaceId: string }) {
     setSaving(false)
     setOpen(false)
     router.refresh()
+    router.prefetch("/dashboard")
   }
 
   return (
