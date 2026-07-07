@@ -16,6 +16,7 @@ const CORE_ROUTES = [
   "/nexa",
   "/money",
   "/review",
+  "/profile",
 ]
 
 export function WarmRoutes() {

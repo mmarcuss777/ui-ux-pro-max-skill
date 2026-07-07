@@ -438,6 +438,39 @@ export type Database = {
         }
         Relationships: []
       }
+      profiles: {
+        Row: {
+          user_id: string
+          name: string | null
+          training_per_week: number
+          focus_minutes_per_day: number
+          waste_limit_month: number | null
+          main_goal: string | null
+          created_at: string
+          updated_at: string
+        }
+        Insert: {
+          user_id: string
+          name?: string | null
+          training_per_week?: number
+          focus_minutes_per_day?: number
+          waste_limit_month?: number | null
+          main_goal?: string | null
+          created_at?: string
+          updated_at?: string
+        }
+        Update: {
+          user_id?: string
+          name?: string | null
+          training_per_week?: number
+          focus_minutes_per_day?: number
+          waste_limit_month?: number | null
+          main_goal?: string | null
+          created_at?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
     }
     Views: Record<string, never>
     Functions: Record<string, never>
@@ -454,3 +487,4 @@ export type Experiment = Database["public"]["Tables"]["experiments"]["Row"]
 export type Offer = Database["public"]["Tables"]["offers"]["Row"]
 export type Contact = Database["public"]["Tables"]["contacts"]["Row"]
 export type Transaction = Database["public"]["Tables"]["transactions"]["Row"]
+export type Profile = Database["public"]["Tables"]["profiles"]["Row"]

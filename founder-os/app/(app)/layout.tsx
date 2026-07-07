@@ -1,5 +1,6 @@
 import Link from "next/link"
 import { redirect } from "next/navigation"
+import { PersonIcon } from "@radix-ui/react-icons"
 
 import { AppNav, BottomNav } from "@/components/app-nav"
 import { HeaderSections } from "@/components/header-sections"
@@ -50,6 +51,15 @@ export default async function AppLayout({
               <LogoutButton />
             </div>
             <HeaderSections />
+            {/* The operator's profile — rank, records, bars. */}
+            <Link
+              href="/profile"
+              prefetch={true}
+              aria-label="Profile"
+              className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full border border-gold/30 bg-gold/10 text-gold-dark transition-transform active:scale-90"
+            >
+              <PersonIcon className="h-4 w-4" />
+            </Link>
             <MobileMenu
               workspaces={workspaces.map(({ id, name, status }) => ({
                 id,

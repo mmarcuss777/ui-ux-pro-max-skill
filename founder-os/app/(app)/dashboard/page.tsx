@@ -4,36 +4,32 @@ import {
   BarChartIcon,
   ChatBubbleIcon,
   LightningBoltIcon,
+  RocketIcon,
   TargetIcon,
 } from "@radix-ui/react-icons"
 
+import { CloseDayCard } from "@/components/close-day-card"
 import { Greeting } from "@/components/greeting"
 import { MinimumDay } from "@/components/minimum-day"
-import { RemindersCard } from "@/components/reminders-card"
-
-import { CloseDayCard } from "@/components/close-day-card"
-import { CurrentBuildCard } from "@/components/current-build-card"
-import { MissionPanel } from "@/components/mission-panel"
 import { OneMoveCard } from "@/components/one-move-card"
 import { ScoreRing } from "@/components/score-ring"
 import { Card, CardContent } from "@/components/ui/card"
 import { daysAgo, today } from "@/lib/dates"
 import { getT } from "@/lib/i18n-server"
-import type {
-  CloseDayData,
-  MissionData,
-  OneMoveData,
-  WeeklyResetData,
-} from "@/lib/log-schema"
+import type { CloseDayData, OneMoveData } from "@/lib/log-schema"
 import { daysLabel } from "@/lib/plural"
 import {
+  connectedPillars,
+  scoreDay,
+  scoreGaps,
+  weekScore,
+  type ScoreBand,
+  scoreBand,
+} from "@/lib/score"
+import {
   actionDates,
-  dailyScore,
   dayStarted,
   metricActionDates,
-  metricPillars,
-  pillarComplete,
-  pillarEvidence,
   streakWithShields,
   type Pillar,
 } from "@/lib/stats"
@@ -43,70 +39,68 @@ import { cn } from "@/lib/utils"
 import type { Log } from "@/types/db"
 
 const PILLAR_KEYS: Pillar[] = ["body", "mind", "build", "money"]
+const PILLAR_LINKS: Record<Pillar, string> = {
+  body: "/body",
+  mind: "/mind",
+  build: "/build",
+  money: "/money",
+}
 
+// The day in four blocks: where you stand (score), the one commitment
+// (One Move), the points still on the table, and the evening close.
+// Everything else lives in its own section — this page creates movement,
+// it doesn't archive it.
 export default async function TodayPage() {
   const supabase = createClient()
   const { locale, d } = getT()
   const todayDate = today()
-  // A month of history feeds the streak; today's slice feeds the score.
   const monthAgo = daysAgo(29)
 
-  // ONE round trip for the whole page: workspaces run inside the same
-  // Promise.all, and builds/experiments are fetched user-wide (RLS scopes
-  // them anyway) then filtered by the active workspace in memory — the
-  // old workspaces→queries waterfall doubled time-to-content on the
-  // heaviest page in the app.
   const [
     workspaces,
     { data: todayRows },
-    { data: monthMeta },
+    { data: monthFull },
     { data: recentSpecial },
-    { data: transactions },
+    { data: txMonth },
     { data: allBuilds },
-    { data: allOverdue },
     { data: metricRows },
+    { data: integrations },
   ] = await Promise.all([
     getWorkspaces(),
     supabase.from("logs").select("*").eq("date", todayDate),
-    supabase.from("logs").select("date,type").gte("date", monthAgo),
+    supabase.from("logs").select("date,type,data").gte("date", monthAgo),
     supabase
       .from("logs")
       .select("*")
       .in("type", ["close_day", "weekly_reset"])
       .gte("date", daysAgo(8))
       .order("date", { ascending: false }),
-    supabase.from("transactions").select("date").gte("date", monthAgo),
+    supabase
+      .from("transactions")
+      .select("date,type,moved_forward")
+      .gte("date", monthAgo),
     supabase
       .from("builds")
       .select("*")
       .eq("status", "active")
       .order("created_at", { ascending: false }),
     supabase
-      .from("experiments")
-      .select("id,workspace_id")
-      .neq("status", "decided")
-      .not("deadline", "is", null)
-      .lt("deadline", todayDate),
-    supabase
       .from("imported_metrics")
       .select("date,metric,value")
       .gte("date", monthAgo),
+    supabase.from("integrations").select("provider,status"),
   ])
   const active = resolveActiveWorkspace(workspaces)!
 
   const todayLogs: Log[] = todayRows ?? []
-  const monthLogs = monthMeta ?? []
+  const monthLogs = monthFull ?? []
   const specialLogs: Log[] = recentSpecial ?? []
-  const txDates = transactions ?? []
-  const todayTx = txDates.filter((t) => t.date === todayDate)
+  const transactions = txMonth ?? []
+  const todayTx = transactions.filter((t) => t.date === todayDate)
+  const metrics = metricRows ?? []
   const build =
     (allBuilds ?? []).find((b) => b.workspace_id === active.id) ?? null
-  const overdueExperiments = (allOverdue ?? []).filter(
-    (e) => e.workspace_id === active.id
-  )
 
-  const missionRow = todayLogs.find((l) => l.type === "mission") ?? null
-  const mission = missionRow ? ((missionRow.data ?? {}) as MissionData) : null
   const oneMoveRow = todayLogs.find((l) => l.type === "one_move") ?? null
   const oneMove = oneMoveRow ? ((oneMoveRow.data ?? {}) as OneMoveData) : null
   const closeRow = todayLogs.find((l) => l.type === "close_day") ?? null
@@ -122,70 +116,61 @@ export default async function TodayPage() {
         ?.tomorrow_first_move ?? ""
     ).trim() || null
 
-  // The focus set at the last Weekly Reset follows the user all week.
-  const lastReset = specialLogs.find((l) => l.type === "weekly_reset")
-  const weekFocus =
-    ((lastReset?.data as WeeklyResetData | undefined)?.focus ?? "").trim() ||
-    null
-
-  // Imported metrics light pillars and extend the streak exactly like
-  // manual logs — the day counts even before anything is typed by hand.
-  const metrics = metricRows ?? []
-  const fromMetrics = metricPillars(metrics, todayDate)
-  const manualEvidence = pillarEvidence(todayLogs, todayTx)
-  const evidence = {
-    body: manualEvidence.body || fromMetrics.body === true,
-    mind: manualEvidence.mind,
-    build: manualEvidence.build || fromMetrics.build === true,
-    money: manualEvidence.money || fromMetrics.money === true,
+  // Operator Score: today, the week average and the 30-day record —
+  // one honest engine for all three (see lib/score.ts).
+  const connected = connectedPillars(integrations ?? [])
+  const dayTotals: number[] = []
+  for (let i = 0; i < 30; i++) {
+    dayTotals.push(
+      scoreDay(daysAgo(i), monthLogs, transactions, metrics, connected).total
+    )
   }
-  const complete = pillarComplete(mission, evidence)
-  const score = dailyScore(complete)
-  const pillarsDone = Object.values(complete).filter(Boolean).length
+  const todayScore = scoreDay(
+    todayDate,
+    monthLogs,
+    transactions,
+    metrics,
+    connected
+  )
+  const score = todayScore.total
+  const week = weekScore(dayTotals.slice(0, 7))
+  const record = Math.max(...dayTotals)
+  const band: ScoreBand = scoreBand(score)
+  const gaps = scoreGaps(todayScore)
+  const pillarsDone = PILLAR_KEYS.filter(
+    (p) => todayScore.pillars[p].action
+  ).length
+
   const started =
-    dayStarted(todayLogs, todayTx) ||
-    Object.values(fromMetrics).some(Boolean)
-  const allDates = actionDates(monthLogs, txDates)
+    dayStarted(todayLogs, todayTx) || score > 0
+  const allDates = actionDates(monthLogs, transactions)
   metricActionDates(metrics).forEach((date) => allDates.add(date))
   const { streak: streakDays, shieldsLeft } = streakWithShields(allDates)
-  // Streak just fell, but there was life in the last week — fresh-start
-  // framing instead of an empty zero ("never miss twice").
   const recentlyActive = [1, 2, 3, 4, 5, 6, 7].some((n) =>
     allDates.has(daysAgo(n))
   )
-  const overdueCount = overdueExperiments?.length ?? 0
-  // A streak milestone reached today deserves its own line.
   const milestone = [100, 30, 7].find((m) => streakDays === m) ?? null
 
   // Insight for the close-day summary: which pillar lifts this user's
-  // days the most (evidence-only, last 30 days). A small personalized
-  // observation is a variable reward — you never know which one lands.
-  const txDateSet = new Set(txDates.map((t) => t.date))
-  const days: { score: number; has: Record<string, boolean> }[] = []
-  for (let i = 1; i <= 29; i++) {
-    const date = daysAgo(i)
-    const has = {
-      body: monthLogs.some(
-        (l) => l.date === date && ["body", "fitness"].includes(l.type)
-      ),
-      mind: monthLogs.some(
-        (l) => l.date === date && ["mind", "learning"].includes(l.type)
-      ),
-      build: monthLogs.some((l) => l.date === date && l.type === "build"),
-    }
-    const money = txDateSet.has(date)
-    const score =
-      (Number(has.body) + Number(has.mind) + Number(has.build) + Number(money)) * 25
-    days.push({ score, has })
-  }
+  // days the most (last 30 days) — a small variable reward.
   let insight: string | null = null
   let bestDelta = 0
+  const pastDays = dayTotals
+    .map((total, i) => ({
+      total,
+      date: daysAgo(i),
+    }))
+    .slice(1)
   for (const pillar of ["body", "mind", "build"] as const) {
-    const withPillar = days.filter((day) => day.has[pillar])
-    const withoutPillar = days.filter((day) => !day.has[pillar])
+    const hasPillar = (date: string) =>
+      scoreDay(date, monthLogs, transactions, metrics, connected).pillars[
+        pillar
+      ].action
+    const withPillar = pastDays.filter((day) => hasPillar(day.date))
+    const withoutPillar = pastDays.filter((day) => !hasPillar(day.date))
     if (withPillar.length < 3 || withoutPillar.length < 3) continue
-    const avg = (list: typeof days) =>
-      list.reduce((sum, day) => sum + day.score, 0) / list.length
+    const avg = (list: typeof pastDays) =>
+      list.reduce((sum, day) => sum + day.total, 0) / list.length
     const delta = Math.round(avg(withPillar) - avg(withoutPillar))
     if (delta > bestDelta && delta >= 10) {
       bestDelta = delta
@@ -197,6 +182,17 @@ export default async function TodayPage() {
       allDates.has(daysAgo(n))
     ).length
     insight = `${d.today.insightFallback} ${weekActive}/7 ${d.review.daysActive}.`
+  }
+
+  const bandLabel: Record<ScoreBand, string> = {
+    off: d.today.bandOff,
+    solid: d.today.bandSolid,
+    operator: d.today.bandOperator,
+    elite: d.today.bandElite,
+  }
+  const gapHint = (pillar: Pillar, kind: "action" | "proof"): string => {
+    const dict = d.today as unknown as Record<string, string>
+    return dict[`gap_${pillar}_${kind}`] ?? ""
   }
 
   return (
@@ -215,7 +211,7 @@ export default async function TodayPage() {
         {streakDays > 0 && (
           <span className="flex items-center gap-1.5 rounded-full border border-gold/30 bg-gold/10 px-3 py-1.5 text-xs font-semibold text-gold-dark">
             <LightningBoltIcon className="h-3.5 w-3.5" />
-            {d.today.streak}: {daysLabel(streakDays, locale)}
+            {daysLabel(streakDays, locale)}
             {shieldsLeft > 0 && (
               <span className="rounded-full bg-gold/20 px-1.5 text-[10px] font-bold tabular-nums">
                 {shieldsLeft}× {d.today.shieldWord}
@@ -225,23 +221,21 @@ export default async function TodayPage() {
         )}
       </div>
 
-      {/* Streak at risk: the loudest line on the page until the first
-          action lands. Milestones: the payoff for keeping it. */}
-      {!started && streakDays > 0 && (
+      {/* One contextual banner at a time: risk beats fresh start beats
+          milestone — the page never stacks alarms. */}
+      {!started && streakDays > 0 ? (
         <div className="space-y-2.5 rounded-xl border border-danger/30 bg-danger/[0.06] px-3.5 py-2.5">
           <p className="text-sm font-medium text-danger">
             {d.today.streakRisk}
           </p>
           <MinimumDay workspaceId={active.id} />
         </div>
-      )}
-      {!started && streakDays === 0 && recentlyActive && (
+      ) : !started && recentlyActive ? (
         <div className="space-y-2.5 rounded-xl border border-gold/30 bg-gold/[0.07] px-3.5 py-2.5">
           <p className="text-sm font-medium text-ink">{d.today.freshStart}</p>
           <MinimumDay workspaceId={active.id} />
         </div>
-      )}
-      {started && milestone && (
+      ) : started && milestone ? (
         <p className="animate-pop gold-fill rounded-xl px-3.5 py-2.5 text-sm font-semibold">
           {milestone === 100
             ? d.today.milestone100
@@ -249,19 +243,63 @@ export default async function TodayPage() {
               ? d.today.milestone30
               : d.today.milestone7}
         </p>
-      )}
+      ) : null}
 
-      {weekFocus && (
-        <p className="flex items-center gap-2 rounded-xl border border-gold/25 bg-gold/[0.07] px-3.5 py-2.5 text-sm">
-          <TargetIcon className="h-4 w-4 shrink-0 text-gold-dark" />
-          <span className="shrink-0 font-medium text-muted-foreground">
-            {d.review.weekFocus}:
-          </span>
-          <span className="min-w-0 truncate font-semibold text-ink">
-            {weekFocus}
-          </span>
-        </p>
-      )}
+      {/* Operator Score — the one number of the app. */}
+      <Card className={cn(score === 100 && "animate-glow border-gold/40")}>
+        <CardContent className="p-4">
+          <div className="flex items-center gap-4">
+            <ScoreRing value={score} size={104} label={d.today.dailyScore} />
+            <div className="min-w-0 flex-1">
+              <p className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
+                {d.today.dailyScore}
+              </p>
+              <p
+                className={cn(
+                  "mt-0.5 text-sm font-semibold",
+                  band === "elite" || score === 100
+                    ? "text-gold-dark"
+                    : "text-ink"
+                )}
+              >
+                {score === 100 ? d.today.perfectDay : bandLabel[band]}
+              </p>
+              <p className="mt-1 text-xs text-muted-foreground">
+                {d.today.weekAvg}: <span className="font-semibold tabular-nums text-ink">{week}</span>
+                {" · "}
+                {d.today.record30}: <span className="font-semibold tabular-nums text-ink">{record}</span>
+              </p>
+            </div>
+          </div>
+          <div className="mt-3 grid grid-cols-4 gap-1.5">
+            {PILLAR_KEYS.map((pillar) => {
+              const p = todayScore.pillars[pillar]
+              return (
+                <Link
+                  key={pillar}
+                  href={PILLAR_LINKS[pillar]}
+                  prefetch={true}
+                  className={cn(
+                    "rounded-xl px-2 py-2 text-center transition-all active:scale-95",
+                    p.points === 25
+                      ? "gold-fill shadow-sm shadow-gold/25"
+                      : p.points > 0
+                        ? "bg-gold/15 text-gold-dark"
+                        : "bg-secondary text-muted-foreground"
+                  )}
+                >
+                  <span className="block text-[11px] font-medium">
+                    {d.pillars[pillar]}
+                  </span>
+                  <span className="block text-sm font-bold tabular-nums">
+                    {p.points}
+                  </span>
+                </Link>
+              )
+            })}
+          </div>
+        </CardContent>
+      </Card>
 
       <OneMoveCard
         oneMoveId={oneMoveRow?.id ?? null}
@@ -270,83 +308,38 @@ export default async function TodayPage() {
         workspaceId={active.id}
       />
 
-      <MissionPanel
-        missionId={missionRow?.id ?? null}
-        mission={mission}
-        complete={complete}
-        workspaceId={active.id}
-      />
-
-      <CurrentBuildCard build={build} showOpen />
-
-      {overdueCount > 0 && (
-        <Link
-          href="/lab"
-          className="flex items-center justify-between rounded-xl border border-danger/25 bg-danger/[0.05] px-3.5 py-2.5 text-sm active:scale-[0.99]"
-        >
-          <span className="font-medium text-danger">
-            {overdueCount} {d.today.overdueLab}
-          </span>
-          <ArrowRightIcon className="h-4 w-4 shrink-0 text-danger" />
-        </Link>
-      )}
-
-      <Card className={cn(score === 100 && "animate-glow border-gold/40")}>
-        <CardContent className="flex items-center gap-4 p-4">
-          {started ? (
-            <ScoreRing value={score} size={84} label={d.today.dailyScore} />
-          ) : (
-            <div
-              aria-hidden
-              className="flex h-[84px] w-[84px] shrink-0 items-center justify-center rounded-full border-2 border-dashed border-line text-xl font-semibold text-muted-foreground"
-            >
-              —
-            </div>
-          )}
-          <div className="min-w-0 flex-1">
-            <p className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
-              {d.today.dailyScore}
+      {/* Points on the table — the reward menu. Every line is a reason
+          to open a section right now. */}
+      <Card>
+        <CardContent className="p-4">
+          <p className="text-xs font-semibold uppercase tracking-wider text-gold-dark">
+            {d.today.missingTitle}
+          </p>
+          {gaps.length === 0 ? (
+            <p className="mt-2 text-sm font-semibold text-gold-dark">
+              {d.today.missingDone}
             </p>
-            {started ? (
-              <>
-                <p className="mt-0.5 text-sm text-ink">
-                  {score === 100 ? (
-                    <span className="font-semibold text-gold-dark">
-                      {d.today.perfectDay}
+          ) : (
+            <ul className="mt-2 space-y-1.5">
+              {gaps.slice(0, 3).map((gap) => (
+                <li key={`${gap.pillar}-${gap.kind}`}>
+                  <Link
+                    href={PILLAR_LINKS[gap.pillar]}
+                    prefetch={true}
+                    className="flex items-center justify-between gap-3 rounded-xl border border-line px-3 py-2.5 text-sm transition-colors hover:bg-gold/[0.04] active:scale-[0.99]"
+                  >
+                    <span className="min-w-0 flex-1 text-ink">
+                      <span className="font-bold tabular-nums text-gold-dark">
+                        +{gap.points}
+                      </span>{" "}
+                      {gapHint(gap.pillar, gap.kind)}
                     </span>
-                  ) : (
-                    <>
-                      {pillarsDone}/4 {d.today.pillarsOf}
-                    </>
-                  )}
-                </p>
-                <div className="mt-2 flex flex-wrap gap-1.5">
-                  {PILLAR_KEYS.map((pillar) => (
-                    <span
-                      key={pillar}
-                      className={cn(
-                        "rounded-full px-2.5 py-1 text-[11px] font-medium",
-                        complete[pillar]
-                          ? "bg-gold/15 text-gold-dark"
-                          : "bg-secondary text-muted-foreground"
-                      )}
-                    >
-                      {d.pillars[pillar]}
-                    </span>
-                  ))}
-                </div>
-              </>
-            ) : (
-              <>
-                <p className="mt-0.5 text-sm font-medium text-ink">
-                  {d.today.notStarted}
-                </p>
-                <p className="text-xs text-muted-foreground">
-                  {d.today.notStartedHint}
-                </p>
-              </>
-            )}
-          </div>
+                    <ArrowRightIcon className="h-4 w-4 shrink-0 text-muted-foreground" />
+                  </Link>
+                </li>
+              ))}
+            </ul>
+          )}
         </CardContent>
       </Card>
 
@@ -360,10 +353,28 @@ export default async function TodayPage() {
         insight={insight}
       />
 
-      <RemindersCard />
+      {/* Active project one-liner + the three header destinations. */}
+      {build && (
+        <Link
+          href="/build"
+          prefetch={true}
+          className="surface flex items-center justify-between gap-3 px-4 py-3 active:scale-[0.99]"
+        >
+          <span className="flex min-w-0 items-center gap-2 text-sm">
+            <RocketIcon className="h-4 w-4 shrink-0 text-gold-dark" />
+            <span className="truncate font-semibold text-ink">
+              {build.name}
+            </span>
+            {build.next_action && (
+              <span className="hidden truncate text-muted-foreground sm:inline">
+                · {build.next_action}
+              </span>
+            )}
+          </span>
+          <ArrowRightIcon className="h-4 w-4 shrink-0 text-muted-foreground" />
+        </Link>
+      )}
 
-      {/* Visible shortcuts to everything that isn't in the dock — nothing
-          lives only behind the hamburger menu. */}
       <div className="grid grid-cols-3 gap-2">
         {[
           { href: "/nexa", label: d.today.askNexa, icon: ChatBubbleIcon },
