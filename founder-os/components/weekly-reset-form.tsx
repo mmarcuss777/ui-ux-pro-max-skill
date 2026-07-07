@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation"
 import { TargetIcon } from "@radix-ui/react-icons"
 
 import { useT } from "@/components/locale-provider"
+import { buzz } from "@/lib/haptics"
 import { PrimaryCta } from "@/components/primary-cta"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
@@ -110,6 +111,7 @@ export function WeeklyResetForm({
       if (focus.trim() === "") return
       const ok = await persist()
       if (!ok) return
+      buzz()
     }
     setStep((s) => Math.min(TOTAL_STEPS, s + 1))
   }

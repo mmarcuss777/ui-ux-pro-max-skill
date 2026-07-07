@@ -5,7 +5,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { daysAgo, shortDate, today } from "@/lib/dates"
 import { getT } from "@/lib/i18n-server"
-import type { MindData } from "@/lib/log-schema"
+import type { MindData, WeeklyResetData } from "@/lib/log-schema"
 import { dayWord } from "@/lib/plural"
 import { MIND_TYPES, streak, weekGrid } from "@/lib/stats"
 import { createClient } from "@/lib/supabase/server"
@@ -31,20 +31,34 @@ export default async function MindPage() {
   const workspaces = await getWorkspaces()
   const active = resolveActiveWorkspace(workspaces)!
 
-  const [{ data: mindLogs }, { data: screenLogs }] = await Promise.all([
-    supabase
-      .from("logs")
-      .select("*")
-      .in("type", MIND_TYPES)
-      .gte("date", daysAgo(90))
-      .order("date", { ascending: false }),
-    supabase
-      .from("logs")
-      .select("*")
-      .eq("type", "screen_time")
-      .order("created_at", { ascending: false })
-      .limit(10),
-  ])
+  const [{ data: mindLogs }, { data: screenLogs }, { data: resetRows }] =
+    await Promise.all([
+      supabase
+        .from("logs")
+        .select("*")
+        .in("type", MIND_TYPES)
+        .gte("date", daysAgo(90))
+        .order("date", { ascending: false }),
+      supabase
+        .from("logs")
+        .select("*")
+        .eq("type", "screen_time")
+        .order("created_at", { ascending: false })
+        .limit(10),
+      supabase
+        .from("logs")
+        .select("*")
+        .eq("type", "weekly_reset")
+        .gte("date", daysAgo(8))
+        .order("date", { ascending: false })
+        .limit(1),
+    ])
+
+  // The mind target set at the Weekly Reset follows the user here.
+  const resetTarget =
+    (
+      (resetRows?.[0]?.data as WeeklyResetData | undefined)?.mind_target ?? ""
+    ).trim() || null
 
   const logs: Log[] = mindLogs ?? []
   const dates = new Set(logs.map((l) => l.date))
@@ -62,6 +76,17 @@ export default async function MindPage() {
         </div>
         <MindFormDialog workspaceId={active.id} />
       </div>
+
+      {resetTarget && (
+        <p className="flex items-center gap-2 rounded-xl border border-gold/25 bg-gold/[0.07] px-3.5 py-2.5 text-sm">
+          <span className="shrink-0 font-medium text-muted-foreground">
+            {d.review.mindTargetLabel}:
+          </span>
+          <span className="min-w-0 truncate font-semibold text-ink">
+            {resetTarget}
+          </span>
+        </p>
+      )}
 
       <Tabs defaultValue="journal">
         <TabsList className="grid h-11 w-full max-w-xs grid-cols-2">

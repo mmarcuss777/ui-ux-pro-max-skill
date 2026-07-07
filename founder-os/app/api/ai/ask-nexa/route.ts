@@ -114,6 +114,17 @@ export async function POST(request: Request) {
       prompt,
       600
     )
+    // Keep the answer — history is a reason to come back. Failure to save
+    // must never block the reply itself.
+    await supabase
+      .from("logs")
+      .insert({
+        user_id: user.id,
+        workspace_id: active?.id ?? null,
+        type: "nexa_qa",
+        data: { question, answer: result, mode },
+      })
+      .then(() => undefined)
     return NextResponse.json({ result })
   } catch (error) {
     console.error("Ask Nexa failed:", error)

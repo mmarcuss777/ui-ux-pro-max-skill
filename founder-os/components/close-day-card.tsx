@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation"
 import { MoonIcon } from "@radix-ui/react-icons"
 
 import { useT } from "@/components/locale-provider"
+import { buzz } from "@/lib/haptics"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent } from "@/components/ui/card"
 import {
@@ -92,6 +93,7 @@ export function CloseDayCard({
       setError(problem.message ?? d.common.error)
       return
     }
+    buzz()
     setOpen(false)
     router.refresh()
   }

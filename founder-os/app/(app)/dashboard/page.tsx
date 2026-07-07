@@ -1,10 +1,13 @@
 import Link from "next/link"
 import {
+  ArrowRightIcon,
   BarChartIcon,
   LightningBoltIcon,
   RocketIcon,
   TargetIcon,
 } from "@radix-ui/react-icons"
+
+import { RemindersCard } from "@/components/reminders-card"
 
 import { CloseDayCard } from "@/components/close-day-card"
 import { CurrentBuildCard } from "@/components/current-build-card"
@@ -56,6 +59,7 @@ export default async function TodayPage() {
     { data: recentSpecial },
     { data: transactions },
     { data: builds },
+    { data: overdueExperiments },
   ] = await Promise.all([
     supabase.from("logs").select("*").eq("date", todayDate),
     supabase.from("logs").select("date,type").gte("date", monthAgo),
@@ -73,6 +77,13 @@ export default async function TodayPage() {
       .eq("status", "active")
       .order("created_at", { ascending: false })
       .limit(1),
+    supabase
+      .from("experiments")
+      .select("id")
+      .eq("workspace_id", active.id)
+      .neq("status", "decided")
+      .not("deadline", "is", null)
+      .lt("deadline", todayDate),
   ])
 
   const todayLogs: Log[] = todayRows ?? []
@@ -111,6 +122,9 @@ export default async function TodayPage() {
   const pillarsDone = Object.values(complete).filter(Boolean).length
   const started = dayStarted(todayLogs, todayTx)
   const streakDays = streak(actionDates(monthLogs, txDates))
+  const overdueCount = overdueExperiments?.length ?? 0
+  // A streak milestone reached today deserves its own line.
+  const milestone = [100, 30, 7].find((m) => streakDays === m) ?? null
 
   return (
     <div className="space-y-6">
@@ -131,6 +145,23 @@ export default async function TodayPage() {
           </span>
         )}
       </div>
+
+      {/* Streak at risk: the loudest line on the page until the first
+          action lands. Milestones: the payoff for keeping it. */}
+      {!started && streakDays > 0 && (
+        <p className="rounded-xl border border-danger/30 bg-danger/[0.06] px-3.5 py-2.5 text-sm font-medium text-danger">
+          {d.today.streakRisk}
+        </p>
+      )}
+      {started && milestone && (
+        <p className="animate-pop gold-fill rounded-xl px-3.5 py-2.5 text-sm font-semibold">
+          {milestone === 100
+            ? d.today.milestone100
+            : milestone === 30
+              ? d.today.milestone30
+              : d.today.milestone7}
+        </p>
+      )}
 
       {weekFocus && (
         <p className="flex items-center gap-2 rounded-xl border border-gold/25 bg-gold/[0.07] px-3.5 py-2.5 text-sm">
@@ -160,7 +191,19 @@ export default async function TodayPage() {
 
       <CurrentBuildCard build={build} showOpen />
 
-      <Card>
+      {overdueCount > 0 && (
+        <Link
+          href="/lab"
+          className="flex items-center justify-between rounded-xl border border-danger/25 bg-danger/[0.05] px-3.5 py-2.5 text-sm active:scale-[0.99]"
+        >
+          <span className="font-medium text-danger">
+            {overdueCount} {d.today.overdueLab}
+          </span>
+          <ArrowRightIcon className="h-4 w-4 shrink-0 text-danger" />
+        </Link>
+      )}
+
+      <Card className={cn(score === 100 && "animate-glow border-gold/40")}>
         <CardContent className="flex items-center gap-4 p-4">
           {started ? (
             <ScoreRing value={score} size={84} label={d.today.dailyScore} />
@@ -179,7 +222,15 @@ export default async function TodayPage() {
             {started ? (
               <>
                 <p className="mt-0.5 text-sm text-ink">
-                  {pillarsDone}/4 {d.today.pillarsOf}
+                  {score === 100 ? (
+                    <span className="font-semibold text-gold-dark">
+                      {d.today.perfectDay}
+                    </span>
+                  ) : (
+                    <>
+                      {pillarsDone}/4 {d.today.pillarsOf}
+                    </>
+                  )}
                 </p>
                 <div className="mt-2 flex flex-wrap gap-1.5">
                   {PILLAR_KEYS.map((pillar) => (
@@ -219,6 +270,8 @@ export default async function TodayPage() {
         pillarsDone={pillarsDone}
         workspaceId={active.id}
       />
+
+      <RemindersCard />
 
       {/* Visible shortcuts to everything that isn't in the dock — nothing
           lives only behind the hamburger menu. */}

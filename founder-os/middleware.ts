@@ -43,6 +43,12 @@ export async function middleware(request: NextRequest) {
   const { pathname } = request.nextUrl
   const isPublic = PUBLIC_PATHS.some((path) => pathname.startsWith(path))
 
+  // Cron endpoints authenticate with CRON_SECRET inside the route —
+  // there is no user session on a scheduled invocation.
+  if (pathname.startsWith("/api/cron")) {
+    return response
+  }
+
   if (hasFreshSession(request)) {
     if (isPublic) {
       const url = request.nextUrl.clone()

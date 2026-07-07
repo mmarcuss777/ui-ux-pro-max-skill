@@ -1,11 +1,19 @@
 import { ReviewGenerator } from "@/components/review-generator"
+import { ScoreTrend } from "@/components/score-trend"
 import { WeeklyResetForm } from "@/components/weekly-reset-form"
 import { Card, CardContent } from "@/components/ui/card"
 import { daysAgo, today, weekStart } from "@/lib/dates"
 import { getT } from "@/lib/i18n-server"
-import type { WeeklyResetData } from "@/lib/log-schema"
+import type { MissionData, WeeklyResetData } from "@/lib/log-schema"
 import { formatMoney } from "@/lib/money"
-import { BODY_TYPES, MIND_TYPES, weekPillarScore } from "@/lib/stats"
+import {
+  BODY_TYPES,
+  MIND_TYPES,
+  dailyScore,
+  pillarComplete,
+  pillarEvidenceFor,
+  weekPillarScore,
+} from "@/lib/stats"
 import { createClient } from "@/lib/supabase/server"
 import { getWorkspaces, resolveActiveWorkspace } from "@/lib/workspace"
 import type { Build, Experiment, Log, Transaction } from "@/types/db"
@@ -107,12 +115,15 @@ export default async function ReviewPage() {
   const active = resolveActiveWorkspace(workspaces)!
   const weekAgo = daysAgo(6)
 
+  const monthAgo = daysAgo(29)
   const [
     { data: logs },
     { data: experiments },
     { data: transactions },
     { data: builds },
     { data: resets },
+    { data: monthRows },
+    { data: monthTx },
   ] = await Promise.all([
     supabase
       .from("logs")
@@ -147,6 +158,14 @@ export default async function ReviewPage() {
       .gte("date", weekStart())
       .order("created_at", { ascending: false })
       .limit(1),
+    // Slim month of rows for the trend chart (screen_time rows carry
+    // large analysis blobs — excluded).
+    supabase
+      .from("logs")
+      .select("date,type,data")
+      .neq("type", "screen_time")
+      .gte("date", monthAgo),
+    supabase.from("transactions").select("date").gte("date", monthAgo),
   ])
 
   const weekLogs: Log[] = logs ?? []
@@ -158,7 +177,18 @@ export default async function ReviewPage() {
     : null
 
   const bodyDays = activeDays(weekLogs, BODY_TYPES)
-  const mindDays = activeDays(weekLogs, MIND_TYPES)
+  // Mind counts journal entries AND close-day rows with a written lesson —
+  // the same rule the daily score uses.
+  const mindDays = new Set(
+    weekLogs
+      .filter(
+        (l) =>
+          MIND_TYPES.includes(l.type) ||
+          (l.type === "close_day" &&
+            ((l.data as { lesson?: string })?.lesson ?? "").trim() !== "")
+      )
+      .map((l) => l.date)
+  ).size
   const buildDays = new Set(
     weekLogs
       .filter(
@@ -184,6 +214,28 @@ export default async function ReviewPage() {
     { label: d.pillars.build, score: scores.buildScore, days: buildDays },
     { label: d.pillars.money, score: scores.money, days: moneyDays },
   ]
+
+  // 30-day trend: real daily scores (evidence + mission dones per day).
+  const trendRows = (monthRows ?? []) as {
+    date: string
+    type: string
+    data: unknown
+  }[]
+  const trendTx = monthTx ?? []
+  const trendPoints: { date: string; score: number }[] = []
+  for (let i = 29; i >= 0; i--) {
+    const date = daysAgo(i)
+    const missionRow = trendRows.find(
+      (r) => r.date === date && r.type === "mission"
+    )
+    const mission = (missionRow?.data ?? null) as MissionData | null
+    trendPoints.push({
+      date,
+      score: dailyScore(
+        pillarComplete(mission, pillarEvidenceFor(date, trendRows, trendTx))
+      ),
+    })
+  }
 
   const summary = buildSummary(
     active.name,
@@ -229,6 +281,8 @@ export default async function ReviewPage() {
           ))}
         </div>
       </div>
+
+      <ScoreTrend points={trendPoints} />
 
       <WeeklyResetForm
         resetId={resetRow?.id ?? null}

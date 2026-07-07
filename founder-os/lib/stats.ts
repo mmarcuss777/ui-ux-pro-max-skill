@@ -27,30 +27,42 @@ export const ACTION_LOG_TYPES = [
 type DatedRow = { date: string }
 type TypedRow = { date: string; type: string }
 
-// Evidence: what today's raw data already proves, mission aside.
-export function pillarEvidence(
-  logs: Log[],
+// Rows with data are needed wherever jsonb flags matter (top_action_done,
+// close-day lesson); Log satisfies this shape.
+type DataRow = { date: string; type: string; data: unknown }
+
+// Evidence for a given date: what that day's raw data proves, mission aside.
+export function pillarEvidenceFor(
+  date: string,
+  logs: DataRow[],
   transactions: DatedRow[]
 ): Record<Pillar, boolean> {
-  const todayDate = today()
-  const todays = logs.filter((l) => l.date === todayDate)
-  const dailyDone = todays.some(
+  const days = logs.filter((l) => l.date === date)
+  const dailyDone = days.some(
     (l) =>
       l.type === "daily" &&
       (l.data as { top_action_done?: boolean })?.top_action_done === true
   )
   // Closing the day with a written lesson is mind work — reward it.
-  const closeLesson = todays.some(
+  const closeLesson = days.some(
     (l) =>
       l.type === "close_day" &&
       ((l.data as CloseDayData)?.lesson ?? "").trim() !== ""
   )
   return {
-    body: todays.some((l) => BODY_TYPES.includes(l.type)),
-    mind: todays.some((l) => MIND_TYPES.includes(l.type)) || closeLesson,
-    build: todays.some((l) => l.type === "build") || dailyDone,
-    money: transactions.some((t) => t.date === todayDate),
+    body: days.some((l) => BODY_TYPES.includes(l.type)),
+    mind: days.some((l) => MIND_TYPES.includes(l.type)) || closeLesson,
+    build: days.some((l) => l.type === "build") || dailyDone,
+    money: transactions.some((t) => t.date === date),
   }
+}
+
+// Evidence: what today's raw data already proves, mission aside.
+export function pillarEvidence(
+  logs: Log[],
+  transactions: DatedRow[]
+): Record<Pillar, boolean> {
+  return pillarEvidenceFor(today(), logs, transactions)
 }
 
 export function pillarComplete(

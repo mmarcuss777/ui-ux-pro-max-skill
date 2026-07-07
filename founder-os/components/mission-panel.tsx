@@ -11,6 +11,7 @@ import {
 } from "@radix-ui/react-icons"
 
 import { useT } from "@/components/locale-provider"
+import { buzz } from "@/lib/haptics"
 import { createClient } from "@/lib/supabase/client"
 import type { MissionData, Pillar } from "@/lib/stats"
 import { Button } from "@/components/ui/button"
@@ -119,6 +120,7 @@ export function MissionPanel({
     const next = !shownDone(pillar)
     setOptimistic((o) => ({ ...o, [pillar]: next }))
     setPopped(next ? pillar : null)
+    if (next) buzz()
     const problem = await persist(buildData({ [pillar]: next }))
     if (problem) {
       setOptimistic((o) => ({ ...o, [pillar]: !next }))

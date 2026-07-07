@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation"
 
 import { useT } from "@/components/locale-provider"
 import { daysAgo, today } from "@/lib/dates"
+import { buzz } from "@/lib/haptics"
 import type { MissionData } from "@/lib/log-schema"
 import {
   actionDates,
@@ -243,6 +244,7 @@ export function LogForm({ workspaceId }: { workspaceId: string }) {
       return
     }
     reset()
+    buzz()
     setFeedback(await computeFeedback(supabase, newLogId, newTxId))
     setSaving(false)
     router.refresh()

@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation"
 import { CheckIcon, StarFilledIcon } from "@radix-ui/react-icons"
 
 import { useT } from "@/components/locale-provider"
+import { buzz } from "@/lib/haptics"
 import { PrimaryCta } from "@/components/primary-cta"
 import { Input } from "@/components/ui/input"
 import type { OneMoveData } from "@/lib/log-schema"
@@ -82,6 +83,7 @@ export function OneMoveCard({
     const next = !done
     setOptimisticDone(next)
     setJustWon(next)
+    if (next) buzz()
     const problem = await persist({
       text: (oneMove?.text ?? "").trim(),
       done: next,

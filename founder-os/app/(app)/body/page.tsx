@@ -6,7 +6,7 @@ import { PrimaryCta } from "@/components/primary-cta"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { daysAgo, shortDate, today } from "@/lib/dates"
 import { getT } from "@/lib/i18n-server"
-import type { BodyGoalData } from "@/lib/log-schema"
+import type { BodyGoalData, WeeklyResetData } from "@/lib/log-schema"
 import { dayWord } from "@/lib/plural"
 import { BODY_TYPES, streak, weekGrid } from "@/lib/stats"
 import { createClient } from "@/lib/supabase/server"
@@ -19,25 +19,38 @@ export default async function BodyPage() {
   const workspaces = await getWorkspaces()
   const active = resolveActiveWorkspace(workspaces)!
 
-  const [{ data }, { data: goalRows }] = await Promise.all([
-    supabase
-      .from("logs")
-      .select("*")
-      .in("type", BODY_TYPES)
-      .gte("date", daysAgo(90))
-      .order("date", { ascending: false }),
-    supabase
-      .from("logs")
-      .select("*")
-      .eq("type", "body_goal")
-      .eq("workspace_id", active.id)
-      .order("created_at", { ascending: false })
-      .limit(1),
-  ])
+  const [{ data }, { data: goalRows }, { data: resetRows }] =
+    await Promise.all([
+      supabase
+        .from("logs")
+        .select("*")
+        .in("type", BODY_TYPES)
+        .gte("date", daysAgo(90))
+        .order("date", { ascending: false }),
+      supabase
+        .from("logs")
+        .select("*")
+        .eq("type", "body_goal")
+        .eq("workspace_id", active.id)
+        .order("created_at", { ascending: false })
+        .limit(1),
+      supabase
+        .from("logs")
+        .select("*")
+        .eq("type", "weekly_reset")
+        .gte("date", daysAgo(8))
+        .order("date", { ascending: false })
+        .limit(1),
+    ])
 
   const logs: Log[] = data ?? []
   const goalRow = goalRows?.[0] ?? null
   const goals = goalRow ? ((goalRow.data ?? {}) as BodyGoalData) : null
+  // The body target set at the Weekly Reset follows the user here.
+  const resetTarget =
+    (
+      (resetRows?.[0]?.data as WeeklyResetData | undefined)?.body_target ?? ""
+    ).trim() || null
   const dates = new Set(logs.map((l) => l.date))
   const currentStreak = streak(dates)
   const grid = weekGrid(dates)
@@ -54,6 +67,17 @@ export default async function BodyPage() {
           <Link href="/log">{d.body.cta}</Link>
         </PrimaryCta>
       </div>
+
+      {resetTarget && (
+        <p className="flex items-center gap-2 rounded-xl border border-gold/25 bg-gold/[0.07] px-3.5 py-2.5 text-sm">
+          <span className="shrink-0 font-medium text-muted-foreground">
+            {d.review.bodyTargetLabel}:
+          </span>
+          <span className="min-w-0 truncate font-semibold text-ink">
+            {resetTarget}
+          </span>
+        </p>
+      )}
 
       <BodyGoalsCard
         goalId={goalRow?.id ?? null}
