@@ -22,6 +22,22 @@ export type CloseDayData = {
   tomorrow_first_move?: string
 }
 
+// type = 'weekly_reset' — the weekly close (one row per week; `date` is
+// the day it was written, `week_start` pins it to its Monday).
+// The `focus` field is surfaced on the Today page all next week.
+export type WeeklyResetData = {
+  worked?: string
+  failed?: string
+  avoided?: string
+  stop?: string
+  focus?: string
+  build_priority?: string
+  body_target?: string
+  mind_target?: string
+  money_rule?: string
+  week_start?: string
+}
+
 // type = 'daily' — the quick daily check-in
 export type DailyData = {
   energy?: number

@@ -17,3 +17,11 @@ export function daysAgo(days: number): string {
 export function today(): string {
   return isoDate(new Date())
 }
+
+// Monday of the current week — the boundary for the Weekly Reset.
+export function weekStart(): string {
+  const date = new Date()
+  const sinceMonday = (date.getDay() + 6) % 7
+  date.setDate(date.getDate() - sinceMonday)
+  return isoDate(date)
+}

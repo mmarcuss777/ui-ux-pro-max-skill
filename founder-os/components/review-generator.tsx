@@ -3,7 +3,7 @@
 import { useState } from "react"
 
 import { useLocale, useT } from "@/components/locale-provider"
-import { PrimaryCta } from "@/components/primary-cta"
+import { Button } from "@/components/ui/button"
 import { Card, CardContent } from "@/components/ui/card"
 
 export function ReviewGenerator({ summary }: { summary: string }) {
@@ -35,9 +35,9 @@ export function ReviewGenerator({ summary }: { summary: string }) {
   return (
     <div className="space-y-4">
       <div className="flex items-center gap-3">
-        <PrimaryCta onClick={generate} disabled={loading}>
+        <Button variant="outline" onClick={generate} disabled={loading}>
           {loading ? d.review.generating : d.review.generate}
-        </PrimaryCta>
+        </Button>
         <p className="text-xs text-muted-foreground">{d.review.limitNote}</p>
       </div>
 

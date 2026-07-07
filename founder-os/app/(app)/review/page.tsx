@@ -1,7 +1,9 @@
 import { ReviewGenerator } from "@/components/review-generator"
+import { WeeklyResetForm } from "@/components/weekly-reset-form"
 import { Card, CardContent } from "@/components/ui/card"
-import { daysAgo, today } from "@/lib/dates"
+import { daysAgo, today, weekStart } from "@/lib/dates"
 import { getT } from "@/lib/i18n-server"
+import type { WeeklyResetData } from "@/lib/log-schema"
 import { formatMoney } from "@/lib/money"
 import { BODY_TYPES, MIND_TYPES, weekPillarScore } from "@/lib/stats"
 import { createClient } from "@/lib/supabase/server"
@@ -105,38 +107,55 @@ export default async function ReviewPage() {
   const active = resolveActiveWorkspace(workspaces)!
   const weekAgo = daysAgo(6)
 
-  const [{ data: logs }, { data: experiments }, { data: transactions }, { data: builds }] =
-    await Promise.all([
-      supabase
-        .from("logs")
-        .select("*")
-        .gte("date", weekAgo)
-        .in("type", [
-          "daily",
-          "body",
-          "mind",
-          "build",
-          "fitness",
-          "learning",
-        ])
-        .order("date"),
-      supabase
-        .from("experiments")
-        .select("*")
-        .eq("workspace_id", active.id)
-        .order("created_at"),
-      supabase.from("transactions").select("*").gte("date", weekAgo),
-      supabase
-        .from("builds")
-        .select("*")
-        .eq("workspace_id", active.id)
-        .eq("status", "active")
-        .limit(1),
-    ])
+  const [
+    { data: logs },
+    { data: experiments },
+    { data: transactions },
+    { data: builds },
+    { data: resets },
+  ] = await Promise.all([
+    supabase
+      .from("logs")
+      .select("*")
+      .gte("date", weekAgo)
+      .in("type", [
+        "daily",
+        "body",
+        "mind",
+        "build",
+        "fitness",
+        "learning",
+        "close_day",
+      ])
+      .order("date"),
+    supabase
+      .from("experiments")
+      .select("*")
+      .eq("workspace_id", active.id)
+      .order("created_at"),
+    supabase.from("transactions").select("*").gte("date", weekAgo),
+    supabase
+      .from("builds")
+      .select("*")
+      .eq("workspace_id", active.id)
+      .eq("status", "active")
+      .limit(1),
+    supabase
+      .from("logs")
+      .select("*")
+      .eq("type", "weekly_reset")
+      .gte("date", weekStart())
+      .order("created_at", { ascending: false })
+      .limit(1),
+  ])
 
   const weekLogs: Log[] = logs ?? []
   const weekTx: Transaction[] = transactions ?? []
   const build = builds?.[0] ?? null
+  const resetRow = resets?.[0] ?? null
+  const reset = resetRow
+    ? ((resetRow.data ?? {}) as WeeklyResetData)
+    : null
 
   const bodyDays = activeDays(weekLogs, BODY_TYPES)
   const mindDays = activeDays(weekLogs, MIND_TYPES)
@@ -211,7 +230,20 @@ export default async function ReviewPage() {
         </div>
       </div>
 
-      <ReviewGenerator summary={summary} />
+      <WeeklyResetForm
+        resetId={resetRow?.id ?? null}
+        reset={reset}
+        workspaceId={active.id}
+        buildName={build?.name ?? null}
+      />
+
+      <div className="space-y-3 border-t border-line pt-5">
+        <div>
+          <p className="text-sm font-semibold text-ink">{d.review.aiTitle}</p>
+          <p className="text-xs text-muted-foreground">{d.review.aiHint}</p>
+        </div>
+        <ReviewGenerator summary={summary} />
+      </div>
 
       <details className="rounded-xl border border-line p-4">
         <summary className="cursor-pointer text-sm font-medium text-ink">

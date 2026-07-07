@@ -1,5 +1,5 @@
 import Link from "next/link"
-import { LightningBoltIcon } from "@radix-ui/react-icons"
+import { LightningBoltIcon, TargetIcon } from "@radix-ui/react-icons"
 
 import { CloseDayCard } from "@/components/close-day-card"
 import { CurrentBuildCard } from "@/components/current-build-card"
@@ -14,6 +14,7 @@ import type {
   CloseDayData,
   MissionData,
   OneMoveData,
+  WeeklyResetData,
 } from "@/lib/log-schema"
 import {
   actionDates,
@@ -76,6 +77,14 @@ export default async function TodayPage() {
         ?.tomorrow_first_move ?? ""
     ).trim() || null
 
+  // The focus set at the last Weekly Reset follows the user all week.
+  const lastReset = recentLogs
+    .filter((l) => l.type === "weekly_reset" && l.date >= daysAgo(8))
+    .sort((a, b) => (a.date < b.date ? 1 : -1))[0]
+  const weekFocus =
+    ((lastReset?.data as WeeklyResetData | undefined)?.focus ?? "").trim() ||
+    null
+
   const evidence = pillarEvidence(todayLogs, todayTx)
   const complete = pillarComplete(mission, evidence)
   const score = dailyScore(complete)
@@ -102,6 +111,18 @@ export default async function TodayPage() {
           </span>
         )}
       </div>
+
+      {weekFocus && (
+        <p className="flex items-center gap-2 rounded-xl border border-gold/25 bg-gold/[0.07] px-3.5 py-2.5 text-sm">
+          <TargetIcon className="h-4 w-4 shrink-0 text-gold-dark" />
+          <span className="shrink-0 font-medium text-muted-foreground">
+            {d.review.weekFocus}:
+          </span>
+          <span className="min-w-0 truncate font-semibold text-ink">
+            {weekFocus}
+          </span>
+        </p>
+      )}
 
       <OneMoveCard
         oneMoveId={oneMoveRow?.id ?? null}
