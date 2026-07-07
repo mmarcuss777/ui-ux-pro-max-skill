@@ -312,6 +312,19 @@ const en = {
     todayProof: "+10 on the table: a commit, an order or revenue.",
     todayNone: "A business action today = +15 points (log or measured).",
     connectRow: "Connect Shopify, Plausible or GitHub — business measures itself.",
+    describeLabel: "Describe your business or idea",
+    describePlaceholder:
+      "In your own words — even half-formed. e.g. 'Something with AI and fitness, not sure what exactly yet'",
+    aiSuggest: "Let Nexa draft it",
+    aiThinking: "Nexa is drafting…",
+    aiLimit: "AI drafts are limited to 5 a day. Fill it in by hand for now.",
+    aiFailed: "The AI draft failed — fill it in by hand or try again.",
+    typePlaceholder: "e.g. cosmetics e-shop, agency, app…",
+    playbookEmpty:
+      "Key questions for this exact business — Nexa drafts them from your description, or add your own.",
+    playbookAdd: "Add row",
+    playbookLabelPh: "Area / question",
+    playbookValuePh: "Answer, or what to find out",
   },
   briefing: {
     title: "Nexa briefing",
@@ -1100,6 +1113,19 @@ const sk: typeof en = {
     todayProof: "+10 na stole: commit, objednávka alebo tržba.",
     todayNone: "Biznis akcia dnes = +15 bodov (zápis alebo meranie).",
     connectRow: "Pripoj Shopify, Plausible alebo GitHub — biznis sa meria sám.",
+    describeLabel: "Opíš svoj biznis alebo nápad",
+    describePlaceholder:
+      "Vlastnými slovami — pokojne nehotové. Napr. 'Niečo s AI a fitnessom, ešte neviem presne čo'",
+    aiSuggest: "Nech to navrhne Nexa",
+    aiThinking: "Nexa navrhuje…",
+    aiLimit: "AI návrhy sú max 5 za deň. Zatiaľ vyplň ručne.",
+    aiFailed: "AI návrh zlyhal — vyplň ručne alebo skús znova.",
+    typePlaceholder: "napr. e-shop s kozmetikou, agentúra, appka…",
+    playbookEmpty:
+      "Kľúčové otázky presne pre tento biznis — Nexa ich navrhne z tvojho popisu, alebo si pridaj vlastné.",
+    playbookAdd: "Pridať riadok",
+    playbookLabelPh: "Oblasť / otázka",
+    playbookValuePh: "Odpoveď, alebo čo zistiť",
   },
   briefing: {
     title: "Nexa briefing",

@@ -2,16 +2,10 @@
 
 import { useState } from "react"
 import { useRouter } from "next/navigation"
+import { Cross2Icon, MagicWandIcon, PlusIcon } from "@radix-ui/react-icons"
 
-import { useT } from "@/components/locale-provider"
+import { useT, useLocale } from "@/components/locale-provider"
 import { createClient } from "@/lib/supabase/client"
-import {
-  BUILD_PRIORITIES,
-  BUILD_STAGES,
-  BUILD_TYPE_KEYS,
-  BUILD_TYPES,
-  type BuildType,
-} from "@/lib/build-types"
 import { PrimaryCta } from "@/components/primary-cta"
 import { Button } from "@/components/ui/button"
 import {
@@ -33,7 +27,15 @@ import {
 import { Textarea } from "@/components/ui/textarea"
 import type { Build } from "@/types/db"
 
-type LabelKey = keyof ReturnType<typeof useT>["labels"]
+// The five universal lifecycle stages — the only fixed thing left.
+// Everything else (type, playbook) is free-form or AI-drafted, so no
+// business model is ever "not in the list".
+const BUILD_STAGES = ["idea", "validation", "building", "selling", "scaling"]
+const BUILD_PRIORITIES = ["high", "medium", "low"]
+
+type StageKey = "idea" | "validation" | "building" | "selling" | "scaling"
+type PriorityKey = "high" | "medium" | "low"
+type PlaybookRow = { label: string; value: string }
 
 async function demoteActive(workspaceId: string, exceptId?: string) {
   const supabase = createClient()
@@ -62,35 +64,65 @@ export function BuildFormDialog({
 }) {
   const router = useRouter()
   const d = useT()
+  const locale = useLocale()
   const editing = Boolean(build)
   const [ownOpen, setOwnOpen] = useState(false)
   const controlled = controlledOpen !== undefined
   const open = controlled ? controlledOpen : ownOpen
   const setOpen = controlled ? (onOpenChange ?? (() => {})) : setOwnOpen
+
+  // The AI entry point: describe the business in your own words.
+  const [description, setDescription] = useState("")
+  const [drafting, setDrafting] = useState(false)
+
   const [name, setName] = useState(build?.name ?? "")
-  const [type, setType] = useState<BuildType>(
-    (build?.business_type as BuildType) ?? "ecommerce"
-  )
+  const [type, setType] = useState(build?.business_type ?? "")
   const [stage, setStage] = useState(build?.stage ?? "idea")
   const [weekGoal, setWeekGoal] = useState(build?.week_goal ?? "")
-  const [nextAction, setNextAction] = useState(build?.next_action ?? "")
   const [priority, setPriority] = useState(build?.priority ?? "high")
   const [notes, setNotes] = useState(build?.notes ?? "")
-  const [fields, setFields] = useState<Record<string, string>>(
-    (build?.fields as Record<string, string>) ?? {}
+  const [playbook, setPlaybook] = useState<PlaybookRow[]>(
+    Object.entries((build?.fields as Record<string, string>) ?? {}).map(
+      ([label, value]) => ({ label, value: String(value ?? "") })
+    )
   )
   const [error, setError] = useState<string | null>(null)
   const [saving, setSaving] = useState(false)
 
-  const typeFields = BUILD_TYPES[type].fields
+  async function draftWithAi() {
+    setDrafting(true)
+    setError(null)
+    const response = await fetch("/api/ai/build-profile", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ description, locale }),
+    })
+    const data = await response.json().catch(() => ({}))
+    setDrafting(false)
+    if (response.status === 429) {
+      setError(d.buildPage.aiLimit)
+      return
+    }
+    if (!response.ok) {
+      setError(d.buildPage.aiFailed)
+      return
+    }
+    // Prefill everything — all of it stays editable below.
+    setName(data.name || name)
+    setType(data.business_type || type)
+    setStage(data.stage || stage)
+    setWeekGoal(data.week_goal || weekGoal)
+    setNotes(data.notes || notes)
+    if (Array.isArray(data.playbook) && data.playbook.length > 0) {
+      setPlaybook(data.playbook)
+    }
+  }
 
-  // E-commerce margin preview: sell − buy − shipping when the numbers parse.
-  const margin =
-    type === "ecommerce"
-      ? Number(fields.sell_price) -
-        Number(fields.buy_price || 0) -
-        Number(fields.shipping_cost || 0)
-      : NaN
+  function setRow(index: number, patch: Partial<PlaybookRow>) {
+    setPlaybook((rows) =>
+      rows.map((row, i) => (i === index ? { ...row, ...patch } : row))
+    )
+  }
 
   async function handleSubmit(event: React.FormEvent) {
     event.preventDefault()
@@ -98,12 +130,16 @@ export function BuildFormDialog({
     setError(null)
 
     const supabase = createClient()
+    const fields = Object.fromEntries(
+      playbook
+        .filter((row) => row.label.trim() !== "")
+        .map((row) => [row.label.trim(), row.value.trim()])
+    )
     const payload = {
       name: name.trim(),
-      business_type: type,
+      business_type: type.trim() || "custom",
       stage,
       week_goal: weekGoal.trim() || null,
-      next_action: nextAction.trim() || null,
       priority,
       notes: notes.trim() || null,
       fields,
@@ -155,6 +191,29 @@ export function BuildFormDialog({
           </DialogTitle>
         </DialogHeader>
         <form onSubmit={handleSubmit} className="space-y-4">
+          {/* AI first: any business, any stage of clarity. */}
+          <div className="space-y-2 rounded-xl border border-gold/25 bg-gold/[0.05] p-3.5">
+            <Label htmlFor="build-describe">{d.buildPage.describeLabel}</Label>
+            <Textarea
+              id="build-describe"
+              rows={3}
+              maxLength={2000}
+              placeholder={d.buildPage.describePlaceholder}
+              value={description}
+              onChange={(e) => setDescription(e.target.value)}
+            />
+            <Button
+              type="button"
+              variant="outline"
+              className="h-10 w-full border-gold/40 text-gold-dark hover:text-gold-dark"
+              disabled={drafting || description.trim().length < 8}
+              onClick={draftWithAi}
+            >
+              <MagicWandIcon className="mr-2 h-4 w-4" />
+              {drafting ? d.buildPage.aiThinking : d.buildPage.aiSuggest}
+            </Button>
+          </div>
+
           <div className="space-y-2">
             <Label htmlFor="build-name">{d.buildPage.name}</Label>
             <Input
@@ -170,21 +229,13 @@ export function BuildFormDialog({
           <div className="grid grid-cols-2 gap-3">
             <div className="space-y-2">
               <Label htmlFor="build-type">{d.buildPage.typeLabel}</Label>
-              <Select
+              <Input
+                id="build-type"
+                maxLength={60}
+                placeholder={d.buildPage.typePlaceholder}
                 value={type}
-                onValueChange={(value) => setType(value as BuildType)}
-              >
-                <SelectTrigger id="build-type">
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  {BUILD_TYPE_KEYS.map((key) => (
-                    <SelectItem key={key} value={key}>
-                      {d.labels[key as LabelKey] ?? key}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
+                onChange={(e) => setType(e.target.value)}
+              />
             </div>
             <div className="space-y-2">
               <Label htmlFor="build-stage">{d.buildPage.stageLabel}</Label>
@@ -195,7 +246,7 @@ export function BuildFormDialog({
                 <SelectContent>
                   {BUILD_STAGES.map((option) => (
                     <SelectItem key={option} value={option}>
-                      {d.labels[option as LabelKey] ?? option}
+                      {d.labels[option as StageKey]}
                     </SelectItem>
                   ))}
                 </SelectContent>
@@ -213,20 +264,6 @@ export function BuildFormDialog({
               onChange={(e) => setWeekGoal(e.target.value)}
             />
           </div>
-          <div className="space-y-2">
-            <Label htmlFor="build-next">{d.buildPage.nextActionLabel}</Label>
-            <Input
-              id="build-next"
-              required
-              maxLength={200}
-              placeholder={d.buildPage.nextActionPlaceholder}
-              value={nextAction}
-              onChange={(e) => setNextAction(e.target.value)}
-            />
-            <p className="text-xs text-muted-foreground">
-              {d.buildPage.nextRequired}
-            </p>
-          </div>
 
           <div className="space-y-2">
             <Label htmlFor="build-priority">{d.buildPage.priorityLabel}</Label>
@@ -237,55 +274,66 @@ export function BuildFormDialog({
               <SelectContent>
                 {BUILD_PRIORITIES.map((option) => (
                   <SelectItem key={option} value={option}>
-                    {d.labels[option as LabelKey] ?? option}
+                    {d.labels[option as PriorityKey]}
                   </SelectItem>
                 ))}
               </SelectContent>
             </Select>
           </div>
 
-          {/* The six core fields above are the whole flow. The playbook is
-              type-specific depth — folded away so the create flow stays
-              short, opened when the founder wants to go deeper. */}
-          <details className="group rounded-xl border border-gold/25 bg-gold/5 p-4">
-            <summary className="flex cursor-pointer items-center justify-between text-xs font-semibold uppercase tracking-wider text-gold-dark">
-              {d.buildPage.playbook} — {d.labels[type as LabelKey] ?? type}
-              <span className="text-muted-foreground transition-transform group-open:rotate-180">
-                ⌄
-              </span>
-            </summary>
-            <div className="mt-3 space-y-3">
-              {typeFields.map((key) => (
-                <div key={key} className="space-y-1.5">
-                  <Label htmlFor={`field-${key}`} className="text-xs">
-                    {d.buildFields[key]}
-                  </Label>
+          {/* The playbook: questions for THIS business, not a template.
+              AI drafts it; every row stays editable and removable. */}
+          <div className="space-y-3 rounded-xl border border-gold/25 bg-gold/5 p-4">
+            <p className="text-xs font-semibold uppercase tracking-wider text-gold-dark">
+              {d.buildPage.playbook}
+            </p>
+            {playbook.length === 0 && (
+              <p className="text-xs text-muted-foreground">
+                {d.buildPage.playbookEmpty}
+              </p>
+            )}
+            {playbook.map((row, index) => (
+              <div key={index} className="space-y-1.5">
+                <div className="flex items-center gap-2">
                   <Input
-                    id={`field-${key}`}
-                    maxLength={200}
-                    value={fields[key] ?? ""}
-                    onChange={(e) =>
-                      setFields((f) => ({ ...f, [key]: e.target.value }))
-                    }
+                    className="h-9 flex-1 text-xs font-medium"
+                    maxLength={80}
+                    placeholder={d.buildPage.playbookLabelPh}
+                    value={row.label}
+                    onChange={(e) => setRow(index, { label: e.target.value })}
                   />
-                </div>
-              ))}
-              {type === "ecommerce" && Number.isFinite(margin) && (
-                <p className="text-sm">
-                  {d.buildPage.margin}:{" "}
-                  <span
-                    className={
-                      margin >= 0
-                        ? "font-semibold tabular-nums text-ok"
-                        : "font-semibold tabular-nums text-danger"
+                  <button
+                    type="button"
+                    aria-label={d.common.delete}
+                    onClick={() =>
+                      setPlaybook((rows) => rows.filter((_, i) => i !== index))
                     }
+                    className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full text-gold-dark/40 transition-all hover:bg-gold/10 hover:text-gold-dark active:scale-90"
                   >
-                    {margin.toFixed(2)}
-                  </span>
-                </p>
-              )}
-            </div>
-          </details>
+                    <Cross2Icon className="h-3.5 w-3.5" />
+                  </button>
+                </div>
+                <Input
+                  maxLength={300}
+                  placeholder={d.buildPage.playbookValuePh}
+                  value={row.value}
+                  onChange={(e) => setRow(index, { value: e.target.value })}
+                />
+              </div>
+            ))}
+            <Button
+              type="button"
+              variant="ghost"
+              size="sm"
+              className="h-8 text-xs"
+              onClick={() =>
+                setPlaybook((rows) => [...rows, { label: "", value: "" }])
+              }
+            >
+              <PlusIcon className="mr-1 h-3.5 w-3.5" />
+              {d.buildPage.playbookAdd}
+            </Button>
+          </div>
 
           <div className="space-y-2">
             <Label htmlFor="build-notes">{d.buildPage.notesLabel}</Label>
